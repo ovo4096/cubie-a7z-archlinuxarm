@@ -1,6 +1,6 @@
 # 烧录前配置 Wi-Fi：无显示器首次启动
 
-CLI 和 XFCE 镜像使用同一套首次启动逻辑。先从公开原始 `.img` 创建带 Wi-Fi 的**私人副本**，再把私人副本按原来的 SD/UFS 流程烧录。公开下载文件不会被修改。
+CLI、XFCE 和 KDE 镜像使用同一套首次启动逻辑。先从公开原始 `.img` 创建带 Wi-Fi 的**私人副本**，再把私人副本按原来的 SD/UFS 流程烧录。公开下载文件不会被修改。
 
 在源码仓库目录运行 [tools/personalize.py](tools/personalize.py)。它只读写普通镜像文件，校验源 SHA256、主/备 GPT、512/4096 扇区布局和 config FAT 边界；不会选择、挂载或写入任何实体磁盘。只有私人副本的 config 分区被修改，启动载荷、EFI、根文件系统和 UUID 保持原样。
 
@@ -25,7 +25,7 @@ py -3 tools/personalize.py `
 
 Windows 路径会自动转成 WSL 路径，默认使用 `Ubuntu`；其他发行版使用 `--wsl-distribution 名称`。Windows 中的私人文件仍受 Windows 文件夹 ACL 管理，请放在仅自己可访问的目录。
 
-UFS 使用对应的 `ufs-4096.img` 作为源，输出另一个 `ufs-4096-private.img`；CLI 版同理。不能用 SD 镜像生成 UFS 版，也不能把已启动系统的磁盘备份当作 pristine 公开源。应从校验过的原始发布镜像开始。
+UFS 使用对应的 `ufs-4096.img` 作为源，输出另一个 `ufs-4096-private.img`；CLI 和 KDE 版同理。不能用 SD 镜像生成 UFS 版，也不能把已启动系统的磁盘备份当作 pristine 公开源。应从校验过的原始发布镜像开始。
 
 ## Linux / WSL
 
@@ -74,6 +74,8 @@ FAT 删除只取消文件引用，**不能保证闪存、文件系统空闲区�
 
 ## 已验证范围
 
-使用新建测试镜像验证了两种扇区的实际 FAT 注入、源镜像 SHA256 不变、config 外所有字节不变、私人标记、重复私有化拒绝和 profile 回读。首次启动导入、权限、失败重试及清理已在临时目录和两种扇区的实际 FAT loop 上验证；NetworkManager 的离线解析器接受生成的 Unicode SSID 配置。测试均未写入实体开发板或已有发布镜像。
+使用新建测试镜像验证了两种扇区的实际 FAT 注入、源镜像 SHA256 不变、config 外所有字节不变、私人标记、重复私有化拒绝和 profile 回读。首次启动导入、权限、失败重试及清理已在临时目录和两种扇区的实际 FAT loop 上验证；NetworkManager 的离线解析器接受生成的 Unicode SSID 配置。这组工具测试未写入实体开发板或公开源镜像。
+
+随后使用私人副本完成 CLI SD、XFCE SD 与 KDE UFS 的实体首次启动验证：自动连接 Wi-Fi，导入的连接配置归 root 所有且权限为 `0600`，成功后删除 config 中的 seed，并生成新的 SSH 主机身份和 pacman 本机密钥。公开源镜像保持清洁；具体镜像及桌面验证范围见 [发行说明](RELEASE.zh-CN.md)。
 
 实现依据：[mtools 镜像操作说明](https://www.gnu.org/software/mtools/manual/mtools.html)、[NetworkManager keyfile 格式](https://networkmanager.pages.freedesktop.org/NetworkManager/NetworkManager/nm-settings-keyfile.html)。

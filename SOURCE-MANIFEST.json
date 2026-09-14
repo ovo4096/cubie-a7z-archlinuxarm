@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "project": "cubie-a7z-archlinuxarm",
-  "created_utc": "2026-09-14T15:21:31.808468+00:00",
+  "created_utc": "2026-09-14T15:27:24.444541+00:00",
   "scope": "Explicitly allowlisted project source, tests, docs and upstream source lock. No images, packages, private diagnostics, backups or repository history.",
   "audit": {
     "result": "PASS",
@@ -73,8 +73,8 @@
     },
     {
       "path": "WIFI-FIRSTBOOT.zh-CN.md",
-      "bytes": 6710,
-      "sha256": "7db639072d9b1ee2825f3a18e6b4339f2f81dd489d2818d10c1a12d69bf0642c",
+      "bytes": 7098,
+      "sha256": "847b07f695f7629691f0baec45d032a16e4df4895814d21c134d80a7f9bdb344",
       "mode": "0644"
     },
     {
