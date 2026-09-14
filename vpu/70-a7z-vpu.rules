@@ -1,0 +1,5 @@
+# Match the T5 devices precisely; logind grants the active local session access.
+# Keep this before 73-seat-late.rules. No world-writable device permissions.
+SUBSYSTEM=="dma_heap", KERNEL=="system", TAG+="uaccess"
+SUBSYSTEM=="cedar_ve", KERNEL=="cedar_dev", TAG+="uaccess"
+SUBSYSTEM=="cedar_ve2", KERNEL=="cedar_dev_ve2", TAG+="uaccess"

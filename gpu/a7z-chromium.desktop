@@ -1,0 +1,23 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Chromium (PowerVR)
+Name[zh_CN]=Chromium（PowerVR）
+GenericName=Web Browser
+GenericName[zh_CN]=网页浏览器
+Comment=Browse using PowerVR Vulkan graphics on the A7Z
+Comment[zh_CN]=使用 A7Z PowerVR Vulkan 绘制网页
+Exec=/usr/bin/a7z-chromium -- %U
+TryExec=/usr/bin/chromium
+Icon=chromium
+Terminal=false
+StartupNotify=true
+StartupWMClass=chromium
+Categories=Network;WebBrowser;
+MimeType=text/html;application/xhtml+xml;x-scheme-handler/http;x-scheme-handler/https;
+Actions=Software;
+
+[Desktop Action Software]
+Name=Software rendering (exit Chromium first)
+Name[zh_CN]=软件渲染（请先退出 Chromium）
+Exec=/usr/bin/a7z-chromium --software -- %U

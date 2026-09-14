@@ -1,0 +1,158 @@
+#!/usr/bin/python3
+"""Select the tested PowerVR Vulkan path without replacing Arch's launcher."""
+
+import ctypes
+import os
+from pathlib import Path
+import sys
+
+
+CHROMIUM = "/usr/bin/chromium"
+ICD = "/usr/share/radxa-a7z-gpu/vulkan/powervr_icd.json"
+ICD_VARIABLES = ("VK_DRIVER_FILES", "VK_ICD_FILENAMES")
+REQUIRED_FEATURES = ("Vulkan", "VulkanFromANGLE", "DefaultANGLEVulkan")
+REQUIRED_SWITCHES = {"ozone-platform": "x11", "use-gl": "angle", "use-angle": "vulkan"}
+
+
+def glib_parser():
+    """Use the same non-expanding shell tokenizer as Arch chromium-launcher."""
+    glib = ctypes.CDLL("libglib-2.0.so.0")
+    vector = ctypes.POINTER(ctypes.c_char_p)
+    glib.g_shell_parse_argv.argtypes = (
+        ctypes.c_char_p, ctypes.POINTER(ctypes.c_int), ctypes.POINTER(vector), ctypes.c_void_p
+    )
+    glib.g_shell_parse_argv.restype = ctypes.c_int
+    glib.g_strfreev.argtypes = (vector,)
+    glib.g_strfreev.restype = None
+
+    def parse(line):
+        count, args = ctypes.c_int(), vector()
+        if not glib.g_shell_parse_argv(line, ctypes.byref(count), ctypes.byref(args), None):
+            return []  # Match Arch: ignore empty/comment lines and invalid quoting.
+        try:
+            return [os.fsdecode(args[i]) for i in range(count.value)]
+        finally:
+            glib.g_strfreev(args)
+
+    return parse
+
+
+def flag_paths(environment):
+    paths = [Path("/etc/chromium-flags.conf")]
+    if "XDG_CONFIG_HOME" in environment:
+        paths.append(Path(environment["XDG_CONFIG_HOME"]) / "chromium-flags.conf")
+    elif "HOME" in environment:
+        paths.append(Path(environment["HOME"]) / ".config/chromium-flags.conf")
+    return paths
+
+
+def read_flags(paths, parse):
+    flags = []
+    for path in paths:
+        try:
+            stream = path.open("rb")
+        except OSError:
+            continue  # Match the official launcher's unreadable-file behavior.
+        with stream:
+            # Linux LINE_MAX is 2048; the official launcher uses fgets(buf, LINE_MAX).
+            while line := stream.readline(2047):
+                flags.extend(parse(line))
+    return flags
+
+
+def option(argument):
+    # Chromium on Linux accepts both '-' and '--', with values separated by '='.
+    argument = argument.strip(" \t\r\n\v\f")
+    if argument == "--" or not argument.startswith("-") or argument == "-":
+        return None
+    body = argument[2:] if argument.startswith("--") else argument[1:]
+    name, _, value = body.partition("=")
+    return name, value
+
+
+def effective_switches(arguments):
+    switches = {}
+    for argument in arguments:
+        if argument.strip(" \t\r\n\v\f") == "--":
+            break
+        if parsed := option(argument):
+            switches[parsed[0]] = parsed[1]
+    return switches
+
+
+def feature_name(value):
+    # Preserve Chromium field-trial and feature-parameter suffixes verbatim.
+    return value.split("<", 1)[0].split(":", 1)[0].lstrip("*")
+
+
+def launch_plan(arguments, environment, configured_flags=(), software=False):
+    """Pure argument/environment construction, also used by the regression tests."""
+    arguments = list(arguments)
+    environment = dict(environment)
+    if any(arg.strip(" \t\r\n\v\f") == "--" for arg in configured_flags):
+        raise ValueError("A '--' terminator in chromium-flags.conf prevents launcher options; remove it first.")
+    split = next((i for i, arg in enumerate(arguments) if arg.strip(" \t\r\n\v\f") == "--"), len(arguments))
+    before, after = arguments[:split], arguments[split:]
+    if software:
+        for key in ICD_VARIABLES:
+            if environment.get(key) == ICD:
+                environment.pop(key)
+        return [CHROMIUM, *before, "--disable-gpu", *after], environment
+
+    switches = effective_switches([*configured_flags, *before])
+    conflicts = ["--" + key for key in (
+        "disable-gpu", "disable-gpu-compositing", "disable-gpu-rasterization"
+    ) if key in switches]
+    conflicts.extend("--" + key for key, value in REQUIRED_SWITCHES.items()
+                     if key in switches and switches[key] != value)
+    disabled = {feature_name(item.strip()) for item in switches.get("disable-features", "").split(",")}
+    conflicts.extend("--disable-features=" + name for name in REQUIRED_FEATURES if name in disabled)
+    if conflicts:
+        raise ValueError("PowerVR conflicts with explicit options: " + ", ".join(conflicts)
+                         + ". Adjust those options or use a7z-chromium --software.")
+
+    features = [item.strip() for item in switches.get("enable-features", "").split(",") if item.strip()]
+    names = {feature_name(item) for item in features}
+    features.extend(name for name in REQUIRED_FEATURES if name not in names)
+    # Only collapse command-line feature switches. The stock launcher still reads
+    # both flags files; our final merged switch preserves their effective value.
+    before = [arg for arg in before if not (option(arg) and option(arg)[0] == "enable-features")]
+    selected = ["--" + key + "=" + value for key, value in REQUIRED_SWITCHES.items()]
+    selected.append("--enable-features=" + ",".join(features))
+    # Arch's launcher forces CHROME_DESKTOP=chromium.desktop. The system may
+    # correctly associate URLs with our separate desktop entry; suppress only
+    # the resulting misleading startup prompt, retaining the stock launcher.
+    selected.append("--no-default-browser-check")
+    for key in ICD_VARIABLES:
+        environment[key] = ICD
+    return [CHROMIUM, *before, *selected, *after], environment
+
+
+def main(arguments=None):
+    arguments = list(sys.argv[1:] if arguments is None else arguments)
+    if arguments[:1] in (["--help"], ["-h"]):
+        print("Usage: a7z-chromium [--software] [CHROMIUM OPTIONS / URLS]\n"
+              "PowerVR uses X11 + ANGLE Vulkan and the normal Chromium profile.\n"
+              "--software disables GPU rendering for this launch.\n"
+              "Exit all Chromium windows/background instances normally before switching modes.\n"
+              "This launcher does not enable hardware video decoding.")
+        return 0
+    software = arguments[:1] == ["--software"]
+    if software:
+        arguments.pop(0)
+    try:
+        if not os.access(CHROMIUM, os.X_OK):
+            raise ValueError("Install the Arch chromium package first.")
+        if not software and not Path(ICD).is_file():
+            raise ValueError("PowerVR ICD is missing; install radxa-a7z-gpu-userspace or use --software.")
+        parse = glib_parser()
+        flags = read_flags(flag_paths(os.environ), parse)
+        command, environment = launch_plan(arguments, os.environ, flags, software)
+        os.execve(CHROMIUM, command, environment)
+    except (OSError, ValueError) as error:
+        print("a7z-chromium: " + str(error), file=sys.stderr)
+        return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -16,7 +16,9 @@ Radxa Cubie A7Z 的 Arch Linux ARM 移植：使用锁定的官方 **T5 / Trixie 
 
 文件名采用 `cubie-a7z-archlinuxarm-{cli|xfce|kde}-t5-{sd-512|ufs-4096}.img.zst`。SD 镜像用于 512 字节逻辑扇区，UFS 镜像用于 4096 字节逻辑扇区；两者不可互换。首次启动自动扩展最后一个 ext4 根分区。
 
-GPU 已验证 EGL/GLES 硬件绘制、Arch Xorg glamor，以及 Qt 动画窗口、SDDM 登录界面和 Plasma 桌面的 PowerVR Vulkan 渲染。KDE 保留 Arch Qt/Mesa/GLVND，用私有 Vulkan ICD 选择 GPU；未向桌面注入私有 EGL 库路径或预加载适配库。KWin 的 EGL 窗口创建仍会崩溃，合成暂时关闭；GLX/AIGLX 客户端仍使用软件路径。Wayland、通用 Vulkan 计算/游戏、视频编解码和长时间负载未因此得到验证。各项状态以发行说明为准。
+GPU 已验证 EGL/GLES 硬件绘制、Arch Xorg glamor，以及 Qt 动画窗口、SDDM 登录界面和 Plasma 桌面的 PowerVR Vulkan 渲染。KDE 保留 Arch Qt/Mesa/GLVND，用私有 Vulkan ICD 选择 GPU；未向桌面注入私有 EGL 库路径或预加载适配库。KWin 的 EGL 窗口创建仍会崩溃，合成暂时关闭；GLX/AIGLX 客户端仍使用软件路径。Wayland、通用 Vulkan 计算/游戏和长时间负载未因此得到验证。各项状态以发行说明为准。
+
+**2026-09-15 增量：** 已实测 XFCE 的 XRender/XPresent 桌面合成；新增 [Chromium（PowerVR）入口](gpu/CHROMIUM.zh-CN.md)，使当前 Chromium 的网页合成、Canvas、WebGL 和栅格化使用 GPU。另提供 [可选 Cedar/OMX 视频包](vpu/README.zh-CN.md)，支持 GStreamer H.264 硬解。[实机验收与限制](gpu/XFCE-CHROMIUM-VALIDATION.zh-CN.md)中包含性能比较和实际解码器检查；**Chromium 内的视频硬解仍未接通**。源码与实机已包含增量，原 `v0.1.0-t5` 六个镜像没有更新。
 
 ## 烧录与无显示器启动
 
@@ -75,12 +77,13 @@ sudo python3 tools/build.py --variant kde --work-dir /root/a7z-build/kde
 
 ## 测试与源码导出
 
-以下测试在 Linux / WSL 中运行，依赖 Linux 路径、权限和设备语义；不要在 Windows 原生 Python 中运行完整测试集。发布前当前版本的 70 项主测试、11 项包测试、15 项 GPU 测试均已通过。
+以下测试在 Linux / WSL 中运行，依赖 Linux 路径、权限和设备语义；不要在 Windows 原生 Python 中运行完整测试集。`v0.1.0-t5` 发布前的 70 项主测试、11 项包测试、15 项 GPU 测试均已通过；后续 Chromium/VPU 增量增加了 12 项启动器和 5 项 VPU 包测试。
 
 ```sh
 python3 -m unittest discover -s tests -p 'test_*.py' -v
 python3 -m unittest discover -s packages/tests -p 'test_*.py' -v
 python3 -m unittest discover -s gpu -p 'test_*.py' -v
+python3 -m unittest discover -s vpu -p 'test_*.py' -v
 python3 tools/export_source.py --plan
 python3 tools/export_source.py --output out/source-release
 ```

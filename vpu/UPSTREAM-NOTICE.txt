@@ -1,0 +1,32 @@
+Radxa Cubie A7Z T5 optional video userspace
+
+This package repackages the fixed rsdk-t5 official root filesystem:
+https://github.com/radxa-build/radxa-a733/releases/tag/rsdk-t5
+Rootfs SHA256: 90087b0702039dda396ff9d99f2d2b6b5eff3f67181bc0f2c956bc3cbc1779e6
+
+Installed Debian source packages:
+libcedarc-dev-2.0.0-arm64 1.0.7
+gstreamer1.0-omx-allwinner 1.18.3-1.1
+gstreamer1.0-omx-allwinner-config 1.18.3-1.1
+
+Allwinner CedarC includes proprietary codec libraries. Embedded copyright
+notices, shipped headers, the vendor changelog, and GStreamer copyright
+and changelog files are retained under this package's upstream/ directory.
+The GStreamer plugin identifies itself as LGPL. The available CedarC
+headers state Copyright (c) 2008-2016 Allwinner Technology Co. Ltd.,
+All rights reserved. The package does not relicense upstream binaries.
+
+Upstream distribution and packaging:
+https://github.com/radxa/allwinner-debian/tree/main/packages/arm64/libcedarc
+https://github.com/radxa/allwinner-debian/tree/main/packages/arm64/gst-omx-generic1.0
+https://github.com/radxa-pkg/allwinner-prebuilt
+https://gstreamer.freedesktop.org/src/gst-omx/
+
+The package recipe records SHA256 for every selected unmodified upstream
+file and every packaged file. ELF RUNPATH is relocated to the private
+library directory; GStreamer core-name paths are relocated in a private
+configuration file. No Debian maintainer scripts execute.
+
+The included uaccess policy is based on Radxa's allwinner-prebuilt
+debian/libgstreamer-openmax-allwinner.sunxi-ve.udev, narrowed to exact
+device names. No official Chromium browser binary is included.

@@ -1,0 +1,322 @@
+{
+  "schema": 1,
+  "vendor_release": "rsdk-t5",
+  "source_date_epoch": 1785826451,
+  "rootfs_sha256": "90087b0702039dda396ff9d99f2d2b6b5eff3f67181bc0f2c956bc3cbc1779e6",
+  "packages": {
+    "libcedarc-dev-2.0.0-arm64": {
+      "version": "1.0.7",
+      "dpkg_list_sha256": "f14b9e6398e32b3d1a23e7defca423ebaf71a4b5a3838547ad86cc9220e7ed6f"
+    },
+    "gstreamer1.0-omx-allwinner": {
+      "version": "1.18.3-1.1",
+      "dpkg_list_sha256": "2460e9fc0117b6c91ed069d5330ab1a69f96b388d484b768e9c174799bd0d5ba"
+    },
+    "gstreamer1.0-omx-allwinner-config": {
+      "version": "1.18.3-1.1",
+      "dpkg_list_sha256": "b5dd4212c03150e366b78bbcd592fc978959c6f07061d6572b5ccd321fc6b4c0"
+    }
+  },
+  "files": [
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/bin/vdecoderdemo",
+      "destination": "usr/lib/radxa-a7z-vpu/bin/vdecoderdemo",
+      "sha256": "6e3c3a33a6477f3851e01e7ed4eb8fbbe8850c9f838959d5f1259402b71d5129"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/bin/vencoderdemo",
+      "destination": "usr/lib/radxa-a7z-vpu/bin/vencoderdemo",
+      "sha256": "ce3235e3c99a3f3190a2778f76726a4b17ff3ce5834c1fa038f29384a6380ce1"
+    },
+    {
+      "package": "gstreamer1.0-omx-allwinner",
+      "source": "usr/lib/aarch64-linux-gnu/gstreamer-1.0/libgstomx-allwinner.so",
+      "destination": "usr/lib/radxa-a7z-vpu/gstreamer-1.0/libgstomx.so",
+      "sha256": "f3fa63a0fdeed85f47bd09c39070b98458046b517d34329b945d0f8baea1cdd3"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/lib/aarch64-linux-gnu/libMemAdapter.so",
+      "destination": "usr/lib/radxa-a7z-vpu/lib/libMemAdapter.so",
+      "sha256": "0c55a47b303f9d99115d589e6bb8d02a370d12c0dac7e691c067b26f648c10a0"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/lib/aarch64-linux-gnu/libOmxCore.so",
+      "destination": "usr/lib/radxa-a7z-vpu/lib/libOmxCore.so",
+      "sha256": "a29760452c43c9e9988742e0b20ad44a7558d35979f9796928272e731b04424f"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/lib/aarch64-linux-gnu/libOmxVdec.so",
+      "destination": "usr/lib/radxa-a7z-vpu/lib/libOmxVdec.so",
+      "sha256": "f596e1845e099a4b73f69817645e1918de80f2eefd2857b004d0a35f50bf7ce7"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/lib/aarch64-linux-gnu/libOmxVenc.so",
+      "destination": "usr/lib/radxa-a7z-vpu/lib/libOmxVenc.so",
+      "sha256": "89780434694af47e1d3493ee7f57c87d846557e61565080b2b3c23403d6aa95c"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/lib/aarch64-linux-gnu/libVE.so",
+      "destination": "usr/lib/radxa-a7z-vpu/lib/libVE.so",
+      "sha256": "3af49a5eb24f6832518a858274fb206d60e490985bff02f5d5be36d053f65be4"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/lib/aarch64-linux-gnu/libawavs.so",
+      "destination": "usr/lib/radxa-a7z-vpu/lib/libawavs.so",
+      "sha256": "3d46076a1a2cb039540e2e5a945a7320791958b827024b7a6586bd2d3cc6824a"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/lib/aarch64-linux-gnu/libawavs2.so",
+      "destination": "usr/lib/radxa-a7z-vpu/lib/libawavs2.so",
+      "sha256": "7b7ba32eafc0605755a5ee4a46a1ec03a94ff004a366314689a90b1d8d8ff2ae"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/lib/aarch64-linux-gnu/libawh264.so",
+      "destination": "usr/lib/radxa-a7z-vpu/lib/libawh264.so",
+      "sha256": "c977fe936a0bf1418f0a452c9769158b3ad2c8ff32aa972c1db4e21630f7fcc3"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/lib/aarch64-linux-gnu/libawh265.so",
+      "destination": "usr/lib/radxa-a7z-vpu/lib/libawh265.so",
+      "sha256": "6adc1bba9ca552e17f6bc8a5d4b28b6cba1a6268feebfded0fa99ed199457df1"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/lib/aarch64-linux-gnu/libawmjpeg.so",
+      "destination": "usr/lib/radxa-a7z-vpu/lib/libawmjpeg.so",
+      "sha256": "c6c0fff04dcddc633544831430727b445a3f1fe4873c881a16aeaed958513e65"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/lib/aarch64-linux-gnu/libawmjpegplus.so",
+      "destination": "usr/lib/radxa-a7z-vpu/lib/libawmjpegplus.so",
+      "sha256": "99b4d3dcac4e5e5c38f9e1387bc803d8d9fd6f975eb7d83899928e79e8feda9d"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/lib/aarch64-linux-gnu/libawmpeg2.so",
+      "destination": "usr/lib/radxa-a7z-vpu/lib/libawmpeg2.so",
+      "sha256": "f93ffabbb28c314769fbaaa0b2432b1cca4f4f5f160a9767fba00a76a37863de"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/lib/aarch64-linux-gnu/libawmpeg4base.so",
+      "destination": "usr/lib/radxa-a7z-vpu/lib/libawmpeg4base.so",
+      "sha256": "d3e89676527bbb61f424cf9b09be46db2c27db26032af9c0f3507c46843d8220"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/lib/aarch64-linux-gnu/libawmpeg4dx.so",
+      "destination": "usr/lib/radxa-a7z-vpu/lib/libawmpeg4dx.so",
+      "sha256": "01c72ccbd86be598867391a1e33c944c89e8beae2a1efa4044afe5e1819e08d0"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/lib/aarch64-linux-gnu/libawmpeg4h263.so",
+      "destination": "usr/lib/radxa-a7z-vpu/lib/libawmpeg4h263.so",
+      "sha256": "fa224002a349b36131212bee325173772fa1dbb0d8e3d80bbd91446f87cb9548"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/lib/aarch64-linux-gnu/libawmpeg4normal.so",
+      "destination": "usr/lib/radxa-a7z-vpu/lib/libawmpeg4normal.so",
+      "sha256": "286687b64fa5fc39ff1f3aad2c8931d3e3073707d578e36a1381eb1890553768"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/lib/aarch64-linux-gnu/libawmpeg4vp6.so",
+      "destination": "usr/lib/radxa-a7z-vpu/lib/libawmpeg4vp6.so",
+      "sha256": "1e4476aa88bcca548978fae4a135c84f55ba2a7b1e096e7da0a72e0fc0d7191e"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/lib/aarch64-linux-gnu/libawvp6soft.so",
+      "destination": "usr/lib/radxa-a7z-vpu/lib/libawvp6soft.so",
+      "sha256": "bc86eb76c6f4a23e08af46b18ca8c04ce336539133722f8ac966ba1c30f585f7"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/lib/aarch64-linux-gnu/libawvp8.so",
+      "destination": "usr/lib/radxa-a7z-vpu/lib/libawvp8.so",
+      "sha256": "fd9bfce1d37fe33a91eebbf5006945174e8f7bbb5d354e88d922c5c584ee3e20"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/lib/aarch64-linux-gnu/libawvp9HwAL.so",
+      "destination": "usr/lib/radxa-a7z-vpu/lib/libawvp9HwAL.so",
+      "sha256": "59432ffc48ea834c292fadd16f7c0dee2fd632d5af909c9ce04e4b5f0e4178f0"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/lib/aarch64-linux-gnu/libcdc_base.so",
+      "destination": "usr/lib/radxa-a7z-vpu/lib/libcdc_base.so",
+      "sha256": "2d1c8b9a0be3c75445290f749e877c9baeb54657d9d8acad92216baae51f507f"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/lib/aarch64-linux-gnu/libfbm.so",
+      "destination": "usr/lib/radxa-a7z-vpu/lib/libfbm.so",
+      "sha256": "4e62691fde22f987c518a8d388e8175a1c6771c60e3c0e08ebc96ba04408e48e"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/lib/aarch64-linux-gnu/libsbm.so",
+      "destination": "usr/lib/radxa-a7z-vpu/lib/libsbm.so",
+      "sha256": "0bba9af82a6ed76a06ee5c5894ebf75bef6c42aeea0a9026035331aa6f808151"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/lib/aarch64-linux-gnu/libscaledown.so",
+      "destination": "usr/lib/radxa-a7z-vpu/lib/libscaledown.so",
+      "sha256": "65ff549bfc6541da9abddf87030c0763ae1197abf98fba7882fc38e967a699ef"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/lib/aarch64-linux-gnu/libvdecVcs.so",
+      "destination": "usr/lib/radxa-a7z-vpu/lib/libvdecVcs.so",
+      "sha256": "4e239fc13922fc450b4b70a88ddce131117208d261cf0dbbd16282380a8e6a1f"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/lib/aarch64-linux-gnu/libvdecoder.so",
+      "destination": "usr/lib/radxa-a7z-vpu/lib/libvdecoder.so",
+      "sha256": "ec47b638c4f3880689d2b148579a32548edcd371d9ff8ff4dcbee82ca9473f9e"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/lib/aarch64-linux-gnu/libvenc_base.so",
+      "destination": "usr/lib/radxa-a7z-vpu/lib/libvenc_base.so",
+      "sha256": "5282b1cd4f69014bb11b3dba9e13daa734de2407c39f4dec3566b7af534b599d"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/lib/aarch64-linux-gnu/libvenc_codec.so",
+      "destination": "usr/lib/radxa-a7z-vpu/lib/libvenc_codec.so",
+      "sha256": "9b22f6db1f55b64562ce1c00a33a52cf4e8829269abe61cc632a5d3e8d365a46"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/lib/aarch64-linux-gnu/libvencoder.so",
+      "destination": "usr/lib/radxa-a7z-vpu/lib/libvencoder.so",
+      "sha256": "0a251db4871b4cacd03776ae760eea5722b46a8091a09f18f83e45a2d7355ccf"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/lib/aarch64-linux-gnu/libvideoengine.so",
+      "destination": "usr/lib/radxa-a7z-vpu/lib/libvideoengine.so",
+      "sha256": "abfea1fa75f6a3ca5413d16eb69fcb87692f3e3b6552d83a222a998e909cef82"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "var/lib/dpkg/info/libcedarc-dev-2.0.0-arm64.changelog",
+      "destination": "usr/share/licenses/radxa-a7z-vpu/upstream/cedarc-changelog.txt",
+      "sha256": "bcd8603e22f54d93b6a7952b4ec4c177ee10889c855db9d25c7eb95c66efb700"
+    },
+    {
+      "package": "gstreamer1.0-omx-allwinner",
+      "source": "usr/share/doc/gstreamer1.0-omx-allwinner/changelog.Debian.gz",
+      "destination": "usr/share/licenses/radxa-a7z-vpu/upstream/gstomx-changelog.Debian.gz",
+      "sha256": "eecf978d266b84a6f1f591a22e794f0ea1106d13db74e95a43bf2a297f68dfb0"
+    },
+    {
+      "package": "gstreamer1.0-omx-allwinner",
+      "source": "usr/share/doc/gstreamer1.0-omx-allwinner/copyright",
+      "destination": "usr/share/licenses/radxa-a7z-vpu/upstream/gstomx-copyright",
+      "sha256": "cb8bf3710139b0824df95027777b96c0c2a10770146f5d50285f84ac31ea2de6"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/include/cdc_config.h",
+      "destination": "usr/share/licenses/radxa-a7z-vpu/upstream/include/cdc_config.h",
+      "sha256": "8b89c638493ed6296b3bdefef6fcb8f23f67be2c91e001c4dcbbf0ab483042c1"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/include/memoryAdapter.h",
+      "destination": "usr/share/licenses/radxa-a7z-vpu/upstream/include/memoryAdapter.h",
+      "sha256": "0f2e86fe5b502c49a69b1bec8d9c9c2bd5b52cc9459d2c5b8e79c71bc5e3a2b0"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/include/sc_interface.h",
+      "destination": "usr/share/licenses/radxa-a7z-vpu/upstream/include/sc_interface.h",
+      "sha256": "dd701416488520a7ffa95eef904485af059ff45f31efdd8979ba0b127e707c53"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/include/sdecoder.h",
+      "destination": "usr/share/licenses/radxa-a7z-vpu/upstream/include/sdecoder.h",
+      "sha256": "3184e6308fc22fc219ca08a2f609bf0b7ea4d9d95db1b74400a42435b04dc7d1"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/include/typedef.h",
+      "destination": "usr/share/licenses/radxa-a7z-vpu/upstream/include/typedef.h",
+      "sha256": "425fd6f6caa9d7fa4830e167e33f7393c07ad2f3071330dfe9c109a636326c89"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/include/vbasetype.h",
+      "destination": "usr/share/licenses/radxa-a7z-vpu/upstream/include/vbasetype.h",
+      "sha256": "db04a1cc726a199a15d93e96630144170abb144f390e3421db4631b55fa401ca"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/include/vdecoder.h",
+      "destination": "usr/share/licenses/radxa-a7z-vpu/upstream/include/vdecoder.h",
+      "sha256": "834e35c138384c23cbef923f1c03ee69c27606fcc6aa9b02b570bd73d3bc91eb"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/include/veAdapter.h",
+      "destination": "usr/share/licenses/radxa-a7z-vpu/upstream/include/veAdapter.h",
+      "sha256": "cb137949c757d2fd5496a3bd42d6f30ae335a4516a9dff12c7705a05254ee0a6"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/include/veInterface.h",
+      "destination": "usr/share/licenses/radxa-a7z-vpu/upstream/include/veInterface.h",
+      "sha256": "1a86acfb83ec923b8ac3dc5fec7e54e472de86243022ab807dd6d06d12b16581"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/include/vencoder.h",
+      "destination": "usr/share/licenses/radxa-a7z-vpu/upstream/include/vencoder.h",
+      "sha256": "ff8bf20307a08016342d920cf46d80991df17857216ce6744601fd77ac871373"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/include/vencoder_platform_v1.h",
+      "destination": "usr/share/licenses/radxa-a7z-vpu/upstream/include/vencoder_platform_v1.h",
+      "sha256": "0e77896fc87cf8335b6ff20d144a0227be7ef6c0c097e065d7aff44a4b829f9b"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "usr/include/vencoder_platform_v2.h",
+      "destination": "usr/share/licenses/radxa-a7z-vpu/upstream/include/vencoder_platform_v2.h",
+      "sha256": "5c1100afd2830406c4d28d0088bdc7cea77749a30210337169d95e9295332463"
+    },
+    {
+      "package": "libcedarc-dev-2.0.0-arm64",
+      "source": "etc/cedarc.conf",
+      "destination": "usr/share/radxa-a7z-vpu/cedarc.conf.example",
+      "sha256": "d7ce91860a20fba6b8b4a7dd07e622169d6cd87ac3050d605e19c354f340f620"
+    },
+    {
+      "package": "gstreamer1.0-omx-allwinner-config",
+      "source": "etc/xdg/gstomx-allwinner.conf",
+      "destination": "usr/share/radxa-a7z-vpu/gstomx.conf",
+      "sha256": "e78328719abd61ebe3eb9c3d9c039bbc69715f2428013e139e5213aa1b32f44f"
+    }
+  ]
+}

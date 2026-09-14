@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "project": "cubie-a7z-archlinuxarm",
-  "created_utc": "2026-09-14T15:27:24.444541+00:00",
+  "created_utc": "2026-09-14T23:01:04.800906+00:00",
   "scope": "Explicitly allowlisted project source, tests, docs and upstream source lock. No images, packages, private diagnostics, backups or repository history.",
   "audit": {
     "result": "PASS",
@@ -43,8 +43,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 8720,
-      "sha256": "a7bbb34f0037c71cd7f6621d0669663fe948a387b852744d2c442ac490da7f14",
+      "bytes": 9376,
+      "sha256": "18b7b9f8cbb05d48b1d82a8eea8099fc491e1ba5b4c75b46f75f45fd551ecc23",
       "mode": "0644"
     },
     {
@@ -61,8 +61,8 @@
     },
     {
       "path": "ROLLING-UPGRADE.zh-CN.md",
-      "bytes": 4916,
-      "sha256": "17801d58b2da835bd17a8b547dc568c9d28cd82db5fefcf71ab7bcad6cfe4732",
+      "bytes": 5423,
+      "sha256": "3def59e6140e63211c5ae86da2dd009801d81473cfd534176955a174305bb220",
       "mode": "0644"
     },
     {
@@ -84,6 +84,12 @@
       "mode": "0644"
     },
     {
+      "path": "gpu/CHROMIUM.zh-CN.md",
+      "bytes": 5689,
+      "sha256": "3d243e14cf7e6d4f4f2619c04f46fb752636b6f5e60f7cce97e4fb56beba1016",
+      "mode": "0644"
+    },
+    {
       "path": "gpu/DESKTOP.zh-CN.md",
       "bytes": 4295,
       "sha256": "cdce45afca7c517c491e7f8083e4f4c977dd170d560304ae789df6c46e08fa61",
@@ -96,10 +102,28 @@
       "mode": "0644"
     },
     {
+      "path": "gpu/XFCE-CHROMIUM-VALIDATION.zh-CN.md",
+      "bytes": 4057,
+      "sha256": "36929ce38df0e0ce3dc8c5795986d6179c6fdb73ec254c3964e0c7eba531acdf",
+      "mode": "0644"
+    },
+    {
       "path": "gpu/a7z-arch-xorg",
       "bytes": 225,
       "sha256": "336687f9618cbd46f05a51b9fd127539ea9dafdee7ea9e513e249d438baf34c9",
       "mode": "0755"
+    },
+    {
+      "path": "gpu/a7z-chromium",
+      "bytes": 6834,
+      "sha256": "845b770b627a4e197d275a9568447b1093275b594f0c5f1448ca5c3c447521d6",
+      "mode": "0755"
+    },
+    {
+      "path": "gpu/a7z-chromium.desktop",
+      "bytes": 708,
+      "sha256": "19575dfc1d9881f18fbb864f73a0db0f9f1d670cf4d694cccd503fc667941553",
+      "mode": "0644"
     },
     {
       "path": "gpu/a7z-gpu-desktop.py",
@@ -141,6 +165,12 @@
       "path": "gpu/test_capture_x11.py",
       "bytes": 4182,
       "sha256": "2d4d3bf5a42454b7228ea31273a87bd43e2fa055443037793df3473b0d6383b7",
+      "mode": "0644"
+    },
+    {
+      "path": "gpu/test_chromium_launcher.py",
+      "bytes": 7027,
+      "sha256": "e582a6f0a140a65c0867f8879db09a8555a2879685873ee78247ca2fae5e9386",
       "mode": "0644"
     },
     {
@@ -337,8 +367,8 @@
     },
     {
       "path": "tools/export_source.py",
-      "bytes": 9088,
-      "sha256": "504cfd54a575e71f946eeedb50b1f0f89b11d12f0cc60da43007fa536fecba5a",
+      "bytes": 9486,
+      "sha256": "8a79ec6b6d87d275da52d115ad02e5251e71459fab7d6797f74bd008599e9379",
       "mode": "0755"
     },
     {
@@ -367,8 +397,14 @@
     },
     {
       "path": "tools/package_gpu.py",
-      "bytes": 21097,
-      "sha256": "fa67d79319ec97e538ce8a02d5cdeb8daecaaf74516809a0b69c4ab4595d155e",
+      "bytes": 21573,
+      "sha256": "2445d0962ae5ffe05274c36c9c605d628f731cfb8b5b02c0121d22927a5a819f",
+      "mode": "0755"
+    },
+    {
+      "path": "tools/package_vpu.py",
+      "bytes": 11778,
+      "sha256": "adb6969ebadb86638d001c1301599b07f0b019a5aa48eaa81bd28c7e7bc2e695",
       "mode": "0755"
     },
     {
@@ -394,6 +430,54 @@
       "bytes": 2276,
       "sha256": "251928330391429be975810d98abc19192c1790212a8c2d0396c4ba876d535e3",
       "mode": "0755"
+    },
+    {
+      "path": "vpu/70-a7z-vpu.rules",
+      "bytes": 337,
+      "sha256": "31a5a77a1970ddc5cd90b14cd8fc3c421a2e1cb370f9694d18babbf938c39b26",
+      "mode": "0644"
+    },
+    {
+      "path": "vpu/CHROMIUM-INTEGRATION.zh-CN.md",
+      "bytes": 3097,
+      "sha256": "0a7b1ae3a501236a9c11820db29764669ec7329cfb6c680fb851b5be4ba6e429",
+      "mode": "0644"
+    },
+    {
+      "path": "vpu/README.zh-CN.md",
+      "bytes": 3873,
+      "sha256": "b85d8599ac63e33a350b1c293496c85f872094cff0425757cabfda4d977a0d8e",
+      "mode": "0644"
+    },
+    {
+      "path": "vpu/UPSTREAM-NOTICE.txt",
+      "bytes": 1609,
+      "sha256": "54460755bb1733dac8084e5d0d47aca0f068610306638dcbd124cecd22205a6c",
+      "mode": "0644"
+    },
+    {
+      "path": "vpu/VALIDATION.zh-CN.md",
+      "bytes": 4202,
+      "sha256": "35de34f7254fec1883014da1070bbc25c964a72154e98224ceb9083cbf0ff12d",
+      "mode": "0644"
+    },
+    {
+      "path": "vpu/a7z-vpu-run",
+      "bytes": 591,
+      "sha256": "bec4754e4b954eea071a67f6ce2fac331a6a51040248f64edfd3af4ddaf722f0",
+      "mode": "0755"
+    },
+    {
+      "path": "vpu/t5-sources.json",
+      "bytes": 14220,
+      "sha256": "af243bba9c3bc8f343c1fd83c346fd30124285047d714ecc434e444309d5b5dc",
+      "mode": "0644"
+    },
+    {
+      "path": "vpu/test_package_vpu.py",
+      "bytes": 5498,
+      "sha256": "736ca4d136e50d33c4ba24f05c9afc55243de31700d4985bc22a714bb6d4b9f9",
+      "mode": "0644"
     }
   ]
 }

@@ -49,6 +49,12 @@ KDE 新增测试版本为 Qt6 base `6.11.2-3`、Qt6 declarative `6.11.2-1`、Pla
 
 ## 更新后的检查与恢复
 
+2026-09-15 的 XFCE/Chromium/VPU 增量已另行完成当前完整 `-Syu` 依赖事务、
+GPU 启动器包升级及 VPU 包安装验证，详见 [实机记录](gpu/XFCE-CHROMIUM-VALIDATION.zh-CN.md)。
+它验证了当前 Chromium/GStreamer 与 T5 用户态配合，没有模拟未来版本兼容性。
+使用新增浏览器入口时，更新后检查 `chrome://gpu` 的 PowerVR 渲染器和实际 WebGL
+绘制；视频须检查媒体日志中的具体解码器，不能用流畅播放代替硬解证明。
+
 ```sh
 uname -r
 systemctl --failed

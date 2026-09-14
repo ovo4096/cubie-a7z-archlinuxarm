@@ -19,7 +19,7 @@ import sys
 import tempfile
 
 PACKAGE = "xserver-xorg-img-bxm-1.21.1-2.deb"
-VERSION = "24.2.6603887_t5-3"
+VERSION = "24.2.6603887_t5-5"
 COMPAT_VERSION = "1.1.1n_t5-3"
 PRIVATE = Path("usr/lib/radxa-a7z-gpu")
 REPO = Path(__file__).resolve().parents[1]
@@ -283,7 +283,8 @@ def archive(stage: Path, output: Path, name: str, version: str, deps: list[str],
                 "license = custom:vendor-see-UPSTREAM-NOTICE"]
     metadata.extend("depend = " + dep for dep in deps)
     if name == "radxa-a7z-gpu-userspace":
-        metadata.append("optdepend = python: a7z-gpu-probe diagnostic")
+        metadata.append("optdepend = python: GPU diagnostics and Chromium launcher")
+        metadata.append("optdepend = chromium: PowerVR-accelerated browser launcher")
     write(stage, ".PKGINFO", "\n".join(metadata) + "\n")
     for p in stage.rglob("*"):
         os.utime(p, (epoch, epoch), follow_symlinks=False)
@@ -346,8 +347,11 @@ def build(args) -> dict:
         write(stages["userspace"], "usr/bin/a7z-gpu-probe", (REPO / "gpu/a7z-gpu-probe.py").read_text(), True)
         write(stages["userspace"], "usr/bin/a7z-gpu-link-check", (REPO / "gpu/check_runtime.py").read_text(), True)
         write(stages["userspace"], "usr/bin/a7z-gpu-desktop", (REPO / "gpu/a7z-gpu-desktop.py").read_text(), True)
+        write(stages["userspace"], "usr/bin/a7z-chromium", (REPO / "gpu/a7z-chromium").read_text(), True)
+        write(stages["userspace"], "usr/share/applications/a7z-chromium.desktop", (REPO / "gpu/a7z-chromium.desktop").read_text())
         write(stages["userspace"], PRIVATE / "arch-Xorg", (REPO / "gpu/a7z-arch-xorg").read_text(), True)
         write(stages["userspace"], "usr/share/doc/radxa-a7z-gpu-userspace/DESKTOP.zh-CN.md", (REPO / "gpu/DESKTOP.zh-CN.md").read_text())
+        write(stages["userspace"], "usr/share/doc/radxa-a7z-gpu-userspace/CHROMIUM.zh-CN.md", (REPO / "gpu/CHROMIUM.zh-CN.md").read_text())
         write(stages["xorg"], "usr/bin/a7z-xorg", (REPO / "gpu/a7z-xorg").read_text(), True)
         config = rooted(root, "etc/X11/xorg.conf.d/20-modesetting.conf")
         if config.is_file():

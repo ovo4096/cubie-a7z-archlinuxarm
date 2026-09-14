@@ -1,0 +1,17 @@
+#!/bin/sh
+# Opt in for this child process; never source into a desktop/session environment.
+set -eu
+if [ "$#" -eq 0 ]; then
+    printf '%s\n' 'Usage: a7z-vpu-run COMMAND [ARG...]' >&2
+    exit 2
+fi
+private=/usr/lib/radxa-a7z-vpu
+cache=${XDG_CACHE_HOME:-${HOME:?HOME is required}/.cache}/a7z-vpu
+mkdir -p -- "$cache"
+export LD_LIBRARY_PATH="$private/lib"
+export GST_PLUGIN_PATH="$private/gstreamer-1.0"
+export GST_PLUGIN_PATH_1_0="$GST_PLUGIN_PATH"
+export GST_OMX_CONFIG_DIR=/usr/share/radxa-a7z-vpu
+export GST_REGISTRY="$cache/registry.bin"
+export GST_REGISTRY_1_0="$GST_REGISTRY"
+exec "$@"
