@@ -1,4 +1,5 @@
 import importlib.util
+import configparser
 from pathlib import Path
 import tempfile
 import types
@@ -42,6 +43,12 @@ class VariantTests(unittest.TestCase):
             self.assertIn('QT_QUICK_BACKEND=software', (root / 'etc/xdg/plasma-workspace/env/a7z-t5.sh').read_text())
             self.assertFalse((root / 'etc/environment').exists())
             self.assertNotIn('LD_LIBRARY_PATH', (root / 'etc/xdg/plasma-workspace/env/a7z-t5.sh').read_text())
+            shell = (root / 'etc/systemd/user/plasma-plasmashell.service.d/90-a7z-kde-vulkan.conf').read_text()
+            self.assertIn('UnsetEnvironment=QT_QUICK_BACKEND LIBGL_ALWAYS_SOFTWARE LD_LIBRARY_PATH LD_PRELOAD', shell)
+            self.assertIn('Environment=QSG_RHI_BACKEND=vulkan', shell)
+            self.assertIn('Environment=VK_DRIVER_FILES=/usr/share/radxa-a7z-gpu/vulkan/powervr_icd.json', shell)
+            self.assertNotIn('ExecStart=', shell)
+            self.assertFalse((root / 'etc/systemd/user/plasma-kwin_x11.service.d').exists())
 
     def test_known_legacy_lightdm_configuration_can_be_migrated_only_exactly(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -55,6 +62,40 @@ class VariantTests(unittest.TestCase):
             path.write_text(legacy + 'autologin-user=someone\n')
             with self.assertRaises(ValueError):
                 rootfs.managed_configuration(root, path.relative_to(root), legacy, legacy_content=legacy)
+
+    def test_kde_greeter_override_survives_generic_helper_configuration(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            sessions = root / 'usr/share/xsessions'
+            sessions.mkdir(parents=True)
+            (sessions / 'plasmax11.desktop').write_text('Exec=/usr/bin/startplasma-x11\n')
+            spec = importlib.util.spec_from_file_location('gpu_desktop',
+                Path(__file__).resolve().parents[1] / 'gpu/a7z-gpu-desktop.py')
+            desktop = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(desktop)
+            for relative in ('usr/lib/Xorg', 'usr/bin/sddm', 'usr/bin/a7z-gpu-run',
+                             'usr/lib/radxa-a7z-gpu/lib/libEGL.so.1',
+                             desktop.ARCH_LAUNCHER.lstrip('/')):
+                path = root / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.touch()
+            rootfs.configure_kde(root)
+            # Simulate finalize repeating the helper after rootfs configuration.
+            desktop.apply(root, 'arch-glamor', 'sddm')
+            rootfs.configure_kde(root)
+            config = configparser.ConfigParser()
+            config.read(sorted((root / 'etc/sddm.conf.d').glob('*.conf')))
+            self.assertEqual(config['General']['GreeterEnvironment'],
+                             'VK_DRIVER_FILES=/usr/share/radxa-a7z-gpu/vulkan/powervr_icd.json,QSG_RHI_BACKEND=vulkan')
+            self.assertIn('/usr/lib/radxa-a7z-gpu/arch-Xorg', config['X11']['ServerPath'])
+            # Disabling only our hardware override restores the retained
+            # CPU fallback, even after the generic helper was reapplied.
+            hardware = root / 'etc/sddm.conf.d/90-a7z-kde-vulkan.conf'
+            hardware.rename(hardware.with_suffix('.conf.disabled'))
+            fallback = configparser.ConfigParser()
+            fallback.read(sorted((root / 'etc/sddm.conf.d').glob('*.conf')))
+            self.assertEqual(fallback['General']['GreeterEnvironment'],
+                             'LIBGL_ALWAYS_SOFTWARE=1,QSG_RHI_BACKEND=opengl')
 
 if __name__ == '__main__':
     unittest.main()

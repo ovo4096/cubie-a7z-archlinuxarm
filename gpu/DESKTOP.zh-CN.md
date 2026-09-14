@@ -30,9 +30,9 @@ sudo a7z-gpu-desktop enable arch-glamor --display-manager sddm
 sudo a7z-gpu-desktop enable arch-software --display-manager sddm
 ```
 
-SDDM 使用 X11 greeter，相同的 Arch Xorg 启动器，以及仅作用于 greeter 的 Qt Quick 软件渲染设置。Wayland 会话目录指向专用空目录，X11 会话目录保留 `/usr/share/xsessions`。切换显示管理器时会移除另一显示管理器的受管片段，不会改变其系统服务状态。
+此 helper 的 SDDM 片段使用 X11 greeter、相同的 Arch Xorg 启动器和 Qt Quick 软件默认值。KDE 镜像构建器另写优先级更高的 `90-a7z-kde-vulkan.conf`，让 SDDM 和 Plasma shell 使用已验收的 PowerVR Vulkan；重复运行 helper 不覆盖这些 KDE 配置。Wayland 会话目录指向专用空目录，X11 会话目录保留 `/usr/share/xsessions`。切换显示管理器时会移除另一显示管理器的受管片段，不会改变其系统服务状态。
 
-KDE 镜像需要官方 `plasma-x11-session`，并独立设置初始 Plasma 软件渲染与关闭 KWin X11 合成。Xorg glamor、SDDM greeter 和 Plasma 客户端必须分别验收。上游 X11 生命周期、包集和配置范围见 [KDE 说明](../KDE.zh-CN.md)。
+KDE 镜像需要官方 `plasma-x11-session`，保留软件回退并关闭 KWin X11 合成。默认 Vulkan 只需 ICD 选择，不给会话添加私有 EGL/GBM 搜索路径。`arch-software` 只回退 X server，不会停用 KDE 的 Vulkan 覆盖；完整回退步骤、上游 X11 生命周期、包集和已验收范围见 [KDE 说明](../KDE.zh-CN.md)。
 
 ## 离线构建、切换与恢复
 
@@ -55,6 +55,6 @@ sudo systemctl restart sddm
 
 配置不创建全局 `LD_LIBRARY_PATH`，不替换 Mesa/libglvnd，不给整个会话套私有 GPU wrapper。应用可显式使用 `a7z-gpu-run PROGRAM`；T5 EGL 不支持 GLVND vendor 接口，不能通过伪造 EGL vendor JSON 接入。封装与探针说明见 [GPU README](README.zh-CN.md)。
 
-X server 的 PowerVR glamor 不代表客户端 GLX 获得硬件加速。GLX/AIGLX 的兼容路径可能使用 DRISWRAST，深度 30 的部分读取格式也可能回退软件；应分别检查日志、实际桌面深度和客户端 renderer。EGL 像素探针与 Vulkan 设备枚举的通过范围有限，不能据此宣称任意 3D 程序、视频解码或 Wayland 已通过验收。
+X server 的 PowerVR glamor 不代表客户端 GLX 获得硬件加速。GLX/AIGLX 的兼容路径可能使用 DRISWRAST，深度 30 的部分读取格式也可能回退软件；应分别检查日志、实际桌面深度和客户端 renderer。除 EGL 像素探针与 Vulkan 设备枚举外，KDE 已单独验证 Qt Quick Vulkan 窗口、SDDM 和 Plasma 的真实显示；这仍不能代表任意 3D 程序、视频解码、KWin 合成或 Wayland 均已通过。
 
 私有 `a7z-xorg` 只用于官方 Xorg 对照诊断，不是默认桌面服务器。二进制再分发范围见 [第三方许可说明](../THIRD-PARTY-LICENSES.zh-CN.md)。

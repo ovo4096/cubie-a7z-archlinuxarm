@@ -16,6 +16,7 @@ from pathlib import Path
 import re
 import shutil
 import stat
+import subprocess
 import sys
 
 
@@ -303,6 +304,62 @@ def _unexpected_private_keys(root):
     return count
 
 
+def audit_initramfs(root):
+    """Inspect early and main CPIO; accept only a hash-free locked root shadow."""
+    report = {"archives_checked": 0, "private_path_matches": 0,
+              "locked_placeholder_shadow_files": 0, "inspection_errors": 0}
+    for archive in safe_path(root, "boot").glob("initramfs-*.img"):
+        try:
+            if archive.is_symlink() or not archive.is_file() or archive.stat().st_size > 256 * 1024 * 1024:
+                raise HygieneError("Initramfs is not a bounded regular file")
+            data = archive.read_bytes()
+            def read_archive(payload, member=None):
+                arguments = ["bsdtar", "-tf", "-"] if member is None else ["bsdtar", "-xOf", "-", member]
+                return subprocess.run(arguments, input=payload, stdout=subprocess.PIPE,
+                                      stderr=subprocess.PIPE, check=True, timeout=60).stdout
+            listing = read_archive(data).decode()
+            offset = 0
+            if data.startswith((b"070701", b"070702")) and "early_cpio" in listing.splitlines():
+                # Parse newc headers; searching for TRAILER!!! in arbitrary file
+                # payload can choose the wrong boundary and miss the main CPIO.
+                while True:
+                    header = data[offset:offset + 110]
+                    if len(header) != 110 or header[:6] not in (b"070701", b"070702"):
+                        raise HygieneError("Malformed early CPIO header")
+                    namesize, size = int(header[94:102], 16), int(header[54:62], 16)
+                    if not 1 <= namesize <= 1048576 or offset + 110 + namesize > len(data):
+                        raise HygieneError("Malformed early CPIO name")
+                    name = data[offset + 110:offset + 110 + namesize].rstrip(b"\0")
+                    offset = (offset + 110 + namesize + 3) // 4 * 4
+                    offset = (offset + size + 3) // 4 * 4
+                    if offset > len(data):
+                        raise HygieneError("Malformed early CPIO size")
+                    if name == b"TRAILER!!!":
+                        break
+                offset = (offset + 511) // 512 * 512
+                while offset < len(data) and data[offset] == 0:
+                    offset += 512
+                if offset >= len(data):
+                    raise HygieneError("Main CPIO missing")
+                listing += "\n" + read_archive(data[offset:]).decode()
+            names = [name.removeprefix("./").rstrip("/") for name in listing.splitlines()]
+            if "init" not in names:
+                raise HygieneError("Main initramfs not inspected")
+            sensitive = ("machine-id", "random-seed", "ssh_host_", "NetworkManager/system-connections",
+                         "pacman.d/gnupg", "/.ssh/", "/.gnupg/")
+            report["private_path_matches"] += sum(any(term in name for term in sensitive) for name in names)
+            if "etc/shadow" in names:
+                rows = [line.split(":") for line in read_archive(data[offset:], "etc/shadow").decode().splitlines() if line]
+                harmless = (len(rows) == 1 and len(rows[0]) >= 2 and rows[0][0] == "root"
+                            and bool(rows[0][1]) and set(rows[0][1]) <= {"!", "*"})
+                report["locked_placeholder_shadow_files" if harmless else "private_path_matches"] += 1
+            report["archives_checked"] += 1
+        except (OSError, ValueError, subprocess.SubprocessError):
+            report["inspection_errors"] += 1
+    report["clean"] = report["private_path_matches"] == report["inspection_errors"] == 0
+    return report
+
+
 def audit_root(root, allow_readonly_mount=False):
     """Return a redacted public-release report; does not modify root."""
     root = validate_root(root, allow_readonly_mount=allow_readonly_mount)
@@ -321,10 +378,14 @@ def audit_root(root, allow_readonly_mount=False):
     misplaced = _unexpected_private_keys(root)
     if misplaced:
         blockers.append("private-key-material-present")
+    initramfs = audit_initramfs(root)
+    if not initramfs["clean"]:
+        blockers.append("initramfs-identity-review-required")
     categories = dict(sorted(Counter(action for action, _ in actions).items()))
     return {"schema": 1, "kind": "public-rootfs-hygiene", "clean": not actions and not blockers,
             "pending_actions": len(actions), "action_categories": categories,
             "blockers": blockers, "private_key_files_detected": misplaced,
+            "initramfs": initramfs,
             "scope": "Offline rootfs only; image partitions and release output require separate checks",
             "password_policy": "Root must be locked; alarm must match the documented public alarm password; hashes are never exported"}
 

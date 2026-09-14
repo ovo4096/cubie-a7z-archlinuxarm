@@ -1,11 +1,13 @@
 import importlib.machinery
 import importlib.util
+import gzip
 import json
 import os
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import shutil
 import unittest
 from unittest import mock
 
@@ -175,6 +177,32 @@ class SanitizeTests(unittest.TestCase):
         with self.assertRaises(subprocess.CalledProcessError):
             keyring_init.initialize(self.root, failed)
         self.assertFalse((self.root / "var/lib/a7z/keyring-initialized").exists())
+
+    @unittest.skipUnless(shutil.which("bsdtar"), "libarchive bsdtar required")
+    def test_initramfs_main_cpio_is_checked_beyond_early_archive(self):
+        def cpio(entries):
+            result = bytearray()
+            for name, contents in [*entries, ("TRAILER!!!", b"")]:
+                filename = name.encode() + b"\0"
+                fields = [0, 0o100600, 0, 0, 1, 0, len(contents), 0, 0, 0, 0, len(filename), 0]
+                result.extend(b"070701" + "".join(f"{x:08x}" for x in fields).encode() + filename)
+                result.extend(b"\0" * (-len(result) % 4))
+                result.extend(contents)
+                result.extend(b"\0" * (-len(result) % 4))
+            result.extend(b"\0" * (-len(result) % 512))
+            return bytes(result)
+        boot = self.root / "boot"
+        boot.mkdir()
+        archive = boot / "initramfs-test.img"
+        early = cpio([("early_cpio", b"1\n")])
+        archive.write_bytes(early + gzip.compress(cpio([("init", b"fixture"), ("etc/shadow", b"root:*::::::: \n")])))
+        safe = sanitize.audit_initramfs(self.root)
+        self.assertTrue(safe["clean"])
+        self.assertEqual(safe["locked_placeholder_shadow_files"], 1)
+        archive.write_bytes(early + gzip.compress(cpio([("init", b"fixture"), ("etc/shadow", b"root:!$6$SYNTHETIC-NOT-A-REAL-HASH:::::::\n")])))
+        self.assertFalse(sanitize.audit_initramfs(self.root)["clean"])
+        archive.write_bytes(early + gzip.compress(cpio([("init", b"fixture"), ("etc/pacman.d/gnupg/private-keys-v1.d/test.key", b"synthetic")])))
+        self.assertFalse(sanitize.audit_initramfs(self.root)["clean"])
 
 
 if __name__ == "__main__":

@@ -10,17 +10,17 @@ Radxa Cubie A7Z 的 Arch Linux ARM 移植：使用锁定的官方 **T5 / Trixie 
 
 | 变体 | 默认环境 | SD / UFS 硬件状态 |
 |---|---|---|
-| `cli` | SSH、NetworkManager、维护工具，无桌面 | 构建与验证中 |
+| `cli` | SSH、NetworkManager、维护工具，无桌面 | SD 首启、联网、扩容与 GPU 探针通过；UFS 完成镜像审计 |
 | `xfce` | XFCE + LightDM + Arch Xorg | 两种介质已实测启动、网络、扩容和桌面 |
-| `kde` | Plasma X11 + SDDM，客户端采用软件渲染默认值 | 构建与验证中 |
+| `kde` | Plasma X11 + SDDM，界面使用 PowerVR Vulkan | UFS 已验证启动、网络和桌面，SD 完成镜像审计 |
 
 文件名采用 `cubie-a7z-archlinuxarm-{cli|xfce|kde}-t5-{sd-512|ufs-4096}.img.zst`。SD 镜像用于 512 字节逻辑扇区，UFS 镜像用于 4096 字节逻辑扇区；两者不可互换。首次启动自动扩展最后一个 ext4 根分区。
 
-GPU 已验证 EGL/GLES 硬件绘制、Arch Xorg glamor 和 Vulkan GPU 枚举。GLX/AIGLX 客户端仍使用软件路径；Vulkan 渲染/计算、Wayland、视频编解码和长时间负载未因此得到验证。CLI/KDE 的细分状态以发行说明为准。
+GPU 已验证 EGL/GLES 硬件绘制、Arch Xorg glamor，以及 Qt 动画窗口、SDDM 登录界面和 Plasma 桌面的 PowerVR Vulkan 渲染。KDE 保留 Arch Qt/Mesa/GLVND，用私有 Vulkan ICD 选择 GPU；未向桌面注入私有 EGL 库路径或预加载适配库。KWin 的 EGL 窗口创建仍会崩溃，合成暂时关闭；GLX/AIGLX 客户端仍使用软件路径。Wayland、通用 Vulkan 计算/游戏、视频编解码和长时间负载未因此得到验证。各项状态以发行说明为准。
 
 ## 烧录与无显示器启动
 
-先校验 release 的 `SHA256SUMS`，再用 `zstd -d 文件.img.zst` 解压。需要无显示器自动联网时，按 [Wi-Fi 向导](WIFI-FIRSTBOOT.zh-CN.md) 创建带 seed 的 `-private.img`，然后烧录该私人副本；公开镜像不包含个人 Wi-Fi 配置或 SSH 公钥。
+下载所选镜像及 release 的 `SHA256SUMS`，运行 `sha256sum --ignore-missing -c SHA256SUMS` 校验已下载文件，再用 `zstd -d 文件.img.zst` 解压，并用对应 `.img.sha256` 校验原始镜像。完整清单同时包含其他变体和未压缩镜像，因此校验下载子集时需要 `--ignore-missing`。需要无显示器自动联网时，按 [Wi-Fi 向导](WIFI-FIRSTBOOT.zh-CN.md) 创建带 seed 的 `-private.img`，然后烧录该私人副本；公开镜像不包含个人 Wi-Fi 配置或 SSH 公钥。
 
 **SD：** 使用支持原始 `.img` 的电脑读卡器烧录工具，选择 SD 卡并完成写入校验，与 [官方 SD 安装流程](https://docs.radxa.com/en/cubie/a7z/getting-started/install-system/microsd) 相同。Linux 也可在确认整个目标设备、卸载其所有分区后写入：
 
@@ -67,13 +67,15 @@ sudo python3 tools/build.py --variant kde --work-dir /root/a7z-build/kde
 
 每个变体必须使用独立、全新的工作目录。Windows 可从 PowerShell 运行同样的 Python 命令，工具会转交给 WSL。默认 XFCE；`--plan` 只预览，`--resume` 只复用源锁、配方、变体和配置均相同的构建目录。失败后的目录保留，不递归删除用户目录；需要重新解包时选择新的工作目录。
 
-流程依次为锁定源下载校验、独立 rootfs 解包、Arch 包安装、BSP/GPU/base 包生成、启动配置、公开镜像清理、两种镜像组装、压缩和审计。`--stop-after` 可停在明确阶段。可用 `--root-size-mib` 指定初始根分区大小；默认按内容估算。KDE 体积较大，应预留足够空间。
+流程依次为锁定源下载校验、独立 rootfs 解包、Arch 包安装、BSP/GPU/base 包生成、启动配置、公开镜像清理、两种镜像组装、压缩和审计。公开导出的源码已在独立 CLI 工作目录跑通全部十个阶段，并校验两种压缩镜像解压后的完整哈希。`--stop-after` 可停在明确阶段。可用 `--root-size-mib` 指定初始根分区大小；默认按内容估算。KDE 体积较大，应预留足够空间。
 
 固定输入见 [config/sources.lock.json](config/sources.lock.json)：T5 内核 `6.6.98-4-aw2511`、配套 U-Boot 和官方 rootfs。`pacman -Syu` 使用滚动仓库，因此固定初始归档不代表以后逐字节重建；工具记录最终包版本、缓存 SHA256、构建配方和镜像哈希，供审计本次结果。
 
 本项目不会把 Debian 的 `/usr/lib` 整体覆盖到 Arch。闭源/预编译 GPU 用户态放在私有目录，Arch Xorg 本体和 Mesa/libglvnd 保留；调用指定 GPU 路径时才使用 wrapper。进一步说明见 [GPU 使用文档](gpu/README.zh-CN.md)。第三方组件的许可证、来源和当前证据边界见 [THIRD-PARTY-LICENSES.zh-CN.md](THIRD-PARTY-LICENSES.zh-CN.md)，不能将项目 MIT 许可证理解为第三方载荷已全部取得同样授权。
 
 ## 测试与源码导出
+
+以下测试在 Linux / WSL 中运行，依赖 Linux 路径、权限和设备语义；不要在 Windows 原生 Python 中运行完整测试集。发布前当前版本的 70 项主测试、11 项包测试、15 项 GPU 测试均已通过。
 
 ```sh
 python3 -m unittest discover -s tests -p 'test_*.py' -v

@@ -73,6 +73,8 @@ a7z-gpu-run a7z-gpu-probe --api egl --device /dev/dri/renderD128
 
 ## 桌面与可选官方 Xorg
 
+KDE 默认让原版 Qt 的 SDDM/Plasma 使用 PowerVR Vulkan ICD，已验证动画窗口和实际桌面呈现。此路径依赖 ICD 自带的私有 RUNPATH，无需向 Qt 注入 `LD_LIBRARY_PATH` 或 `LD_PRELOAD`。KWin 的 EGL 窗口 surface 创建仍复现崩溃，合成暂时关闭；软件回退和环境继承边界见 [KDE 说明](../KDE.zh-CN.md)。命令行 Vulkan 探针本身仍仅检查枚举，界面验收是另行完成的实机检查。
+
 Arch Xorg 的 LightDM/SDDM 配置见 [桌面说明](DESKTOP.zh-CN.md)。X server glamor 与客户端 GLX 是不同路径；本项目不承诺 GLX 客户端硬件加速，也不以 Vulkan 枚举代替 Vulkan 渲染验收。
 
 安装三个组件及可选 Xorg 依赖后，`a7z-xorg -version` 可检查官方 Xorg 的加载。该服务器使用私有模块路径，不自动启动会话。其 `libcrypto.so.1.1` 依赖由 compat 包提供；该兼容库只用于这一诊断路径。官方包仅附带部分 Xorg 模块，完整输入、GLX 和会话兼容性仍需独立检查。

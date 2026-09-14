@@ -89,11 +89,27 @@ def configure_kde(root):
     sessions = list((root / "usr/share/xsessions").glob("*.desktop"))
     if not any("startplasma-x11" in path.read_text() for path in sessions):
         raise ValueError("Official Plasma X11 session missing; this T5 profile cannot silently switch to Wayland")
-    # The server uses private T5 EGL/GBM; Qt and KWin clients retain Arch libraries.
-    # Avoid unverified GLX acceleration in the initial Plasma X11 session.
+    # KWin's T5 EGL window-surface path crashes; keep its compositor disabled.
+    # The session default also provides a rollback when the Vulkan overrides
+    # below are disabled. No private EGL/GBM search path enters the session.
     managed_configuration(root, "etc/xdg/kwinrc", "[Compositing]\nEnabled=false\n")
     managed_configuration(root, "etc/xdg/plasma-workspace/env/a7z-t5.sh",
                           "export QT_QUICK_BACKEND=software\nexport LIBGL_ALWAYS_SOFTWARE=1\n")
+    # Breeze needs scene-graph effects that Qt's QPainter backend omits.
+    # Retain Mesa CPU rendering as the greeter fallback, after the GPU
+    # helper's generic 70-a7z-desktop.conf.
+    managed_configuration(root, "etc/sddm.conf.d/80-a7z-kde-greeter.conf",
+                          "[General]\nGreeterEnvironment=LIBGL_ALWAYS_SOFTWARE=1,QSG_RHI_BACKEND=opengl\n")
+    # The private Vulkan ICD has its own RUNPATH and needs no LD_* variables.
+    # Override only the greeter and shell; keep upstream Plasma ExecStart and
+    # its D-Bus service behavior. KIO-launched applications may inherit QSG/VK.
+    managed_configuration(root, "etc/sddm.conf.d/90-a7z-kde-vulkan.conf",
+                          "[General]\nGreeterEnvironment=VK_DRIVER_FILES=/usr/share/radxa-a7z-gpu/vulkan/powervr_icd.json,QSG_RHI_BACKEND=vulkan\n")
+    managed_configuration(root, "etc/systemd/user/plasma-plasmashell.service.d/90-a7z-kde-vulkan.conf",
+                          "[Service]\n"
+                          "UnsetEnvironment=QT_QUICK_BACKEND LIBGL_ALWAYS_SOFTWARE LD_LIBRARY_PATH LD_PRELOAD LIBGL_DRIVERS_PATH GBM_BACKENDS_PATH\n"
+                          "Environment=QSG_RHI_BACKEND=vulkan\n"
+                          "Environment=VK_DRIVER_FILES=/usr/share/radxa-a7z-gpu/vulkan/powervr_icd.json\n")
     if (root / "usr/share/sddm/themes/breeze/Main.qml").is_file():
         managed_configuration(root, "etc/sddm.conf.d/50-a7z-kde.conf", "[Theme]\nCurrent=breeze\n")
 

@@ -39,6 +39,8 @@ python3 tools/sanitize.py --rootfs /work/rootfs --apply --report /work/rootfs-au
 
 额外扫描 `/etc`、`/opt`、`/srv`、`/usr/local` 中不超过 1 MiB 的普通文件，发现错放的 PEM/SSH 私钥头时阻止 clean 结果；不会擅自删除用途未知的程序文件。这是针对已知身份位置的发布检查，不能替代对新增自定义文件及大文件的内容复核。
 
+工具同时检查 `/boot/initramfs-*.img`。mkinitcpio 镜像可能由 early CPIO 和压缩的主 CPIO 两段组成，检查会解析两段并确认主段的 `init` 存在，不仅检查第一段。发现 machine-id、随机种子、SSH/GPG 密钥路径或凭据时阻止放行；只允许 `etc/shadow` 中恰有一行 root 且密码字段全由 `!`/`*` 组成的无哈希锁定占位。构建宿主需要 `bsdtar`。
+
 清理器拒绝根目录、系统目录、挂载中的 rootfs、嵌套绑定挂载及受管路径中的父级软链接。叶子软链接只被解除，不遍历目标。应独占离线构建目录使用该工具，不要同时启动会写入该目录的服务或构建进程。
 
 ## 首次启动与滚动升级

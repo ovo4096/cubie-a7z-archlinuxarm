@@ -37,10 +37,15 @@ T5 内核没有 Landlock。镜像只设置 `DisableSandboxFilesystem`，保留 p
 | 失败模拟 | 模拟 mkinitcpio 部分写入后失败；原内核、initramfs、extlinux 不变，失败暂存文件移除 |
 | 重启验证 | SD 启动 T5 `6.6.98-4-aw2511`，Wi-Fi/SSH 正常，无失败 systemd unit |
 | 图形验证 | 原始核心事务后正常登录 XFCE、2560×1440 显示、Xorg PowerVR glamor；项目包升级重启后 EGL/GLES 单像素硬件绘制与 Vulkan 枚举再次通过 |
+| 新镜像首启更新 | CLI SD 与 KDE UFS 首启重新生成 pacman 本机密钥后，普通完整 `pacman -Syu` 均成功；仓库无待升级包。KDE 另完成实际签名包下载 |
+| KDE Vulkan 图形包维护 | 完整 `-Syu` 同时重新安装 qt6-base、qt6-declarative、plasma-workspace、kwin-x11、Mesa、libglvnd、libdrm、SDDM，共 8 包；当前系统 7,475 个驱动相关文件哈希不变 |
+| KDE 维护后界面 | 重启 SDDM 后正常密码登录，登录界面与 Plasma 继续使用 PowerVR Vulkan，菜单启动 Dolphin/Konsole 正常；系统与用户服务均无失败项 |
 
 测试版本：glibc `2.43+r22+g8362e8ce10b2-2`、systemd `261.3-1`、mkinitcpio `42-1`、pacman `7.1.0.r9.g54d9411-2`、Mesa `26.2.2-1`、libglvnd `1.7.0-3`、libdrm `2.4.134-1`、Xorg `21.1.24-1`、NetworkManager `1.58.1-1`、wpa_supplicant `2.12-1`。
 
-这些结果证明当前仓库快照和上述实际事务可用，不能保证未来任意 ABI 变化都与闭源 T5 用户态兼容。GLX 客户端走软件渲染；Vulkan 测试只涵盖设备枚举；未完成长时间压力测试。KDE 使用 Plasma X11，后续 Plasma 的 X11 生命周期变化需要单独适配，见 [KDE 说明](KDE.zh-CN.md)。
+KDE 新增测试版本为 Qt6 base `6.11.2-3`、Qt6 declarative `6.11.2-1`、Plasma workspace/KWin X11 `6.7.5-1`、SDDM `0.21.0-7`；8 包事务前后版本相同，是实际下载/签名检查/重装和 hook 测试，而非跨版本 Qt/KDE 升级。
+
+这些结果证明当前仓库快照和上述实际事务可用，不能保证未来任意 ABI 变化都与闭源 T5 用户态兼容。GLX 客户端走软件渲染；命令行 Vulkan 探针只涵盖设备枚举，KDE 另验证了 Qt Quick/SDDM/Plasma 的实际 Vulkan 界面呈现；未完成长时间压力测试。KDE 使用 Plasma X11，后续 Plasma 的 X11 生命周期变化需要单独适配，见 [KDE 说明](KDE.zh-CN.md)。
 
 ## 更新后的检查与恢复
 
