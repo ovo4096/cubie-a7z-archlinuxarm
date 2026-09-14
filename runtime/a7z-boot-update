@@ -1,0 +1,253 @@
+#!/usr/bin/env python3
+"""Prepare versioned A7Z extlinux boot entries; selecting one is explicit."""
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+
+ROOT = Path("/")
+SAFE_RELEASE = re.compile(r"[0-9][A-Za-z0-9._+-]*")
+BEGIN = "# BEGIN A7Z MANAGED "
+END = "# END A7Z MANAGED "
+REQUIRED_BUILTINS = ("CONFIG_BLK_DEV_INITRD", "CONFIG_RD_GZIP", "CONFIG_DEVTMPFS", "CONFIG_SCSI", "CONFIG_BLK_DEV_SD", "CONFIG_MMC", "CONFIG_MMC_BLOCK", "CONFIG_AW_MMC", "CONFIG_SCSI_UFSHCD", "CONFIG_SCSI_UFSHCD_PLATFORM", "CONFIG_AW_UFS", "CONFIG_EXT4_FS")
+
+
+def run(argv):
+    print("+ " + " ".join(map(str, argv)), flush=True)
+    subprocess.run(list(map(str, argv)), check=True)
+
+
+def atomic_write(path, data, mode=0o644):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(prefix="." + path.name + ".", dir=path.parent, delete=False) as stream:
+        temporary = Path(stream.name)
+        try:
+            stream.write(data.encode() if isinstance(data, str) else data)
+            stream.flush()
+            os.fsync(stream.fileno())
+            os.fchmod(stream.fileno(), mode)
+        except BaseException:
+            temporary.unlink(missing_ok=True)
+            raise
+    os.replace(temporary, path)
+
+
+def check_release(release):
+    if not SAFE_RELEASE.fullmatch(release):
+        raise ValueError(f"Invalid kernel release: {release!r}")
+    return release
+
+
+def releases(root=ROOT):
+    found = []
+    for directory in (root / "usr/lib/modules").glob("*"):
+        pkgbase = directory / "pkgbase"
+        if pkgbase.is_file() and pkgbase.read_text().strip() == "linux-radxa-a7z":
+            found.append(check_release(directory.name))
+    return sorted(found, key=lambda value: [int(piece) if piece.isdigit() else piece for piece in re.split(r"(\d+)", value)])
+
+
+def command_line(root=ROOT):
+    path = root / "etc/kernel/cmdline"
+    lines = [line.strip() for line in path.read_text().splitlines() if line.strip() and not line.lstrip().startswith("#")]
+    if len(lines) != 1 or not any(word.startswith("root=") for word in lines[0].split()):
+        raise ValueError("/etc/kernel/cmdline must contain one non-comment line with root=UUID=...")
+    if any(char in lines[0] for char in "\r\x00"):
+        raise ValueError("Invalid control character in kernel command line")
+    return lines[0]
+
+
+def render_extlinux(previous, release, cmdline, select=False):
+    """Preserve all unmanaged entries and the default unless --select is given."""
+    check_release(release)
+    label = "a7z-" + release
+    block = "\n".join([
+        BEGIN + release,
+        f"label {label}",
+        f"    menu label Arch Linux ARM A7Z {release}",
+        f"    linux /boot/vmlinuz-{release}",
+        f"    initrd /boot/initramfs-{release}.img",
+        f"    fdtdir /usr/lib/linux-image-{release}/",
+        f"    append {cmdline}",
+        END + release,
+    ])
+    pattern = re.compile(r"(?m)^" + re.escape(BEGIN + release) + r"\n.*?^" + re.escape(END + release) + r"\s*$", re.S)
+    if pattern.search(previous):
+        result = pattern.sub(lambda _: block, previous).rstrip() + "\n"
+    else:
+        result = previous.rstrip() + ("\n\n" if previous.strip() else "") + block + "\n"
+    if select:
+        if re.search(r"(?im)^\s*default\s+", result):
+            result = re.sub(r"(?im)^\s*default\s+[^\n]+", "default " + label, result, count=1)
+        else:
+            result = "default " + label + "\n" + result
+        if not previous.strip():
+            result = "menu title Arch Linux ARM - Radxa A7Z\nprompt 1\ntimeout 30\n" + result
+    return result
+
+
+def validate_kernel(root, release):
+    check_release(release)
+    image = root / f"boot/vmlinuz-{release}"
+    with image.open("rb") as stream:
+        header = stream.read(64)
+    if header[56:60] != b"ARMd":
+        raise ValueError(f"Not a raw ARM64 Image: {image}")
+    dtb = root / f"usr/lib/linux-image-{release}/allwinner/sun60i-a733-cubie-a7z.dtb"
+    if not dtb.is_file():
+        raise ValueError(f"A7Z device tree missing: {dtb}")
+    config = (root / f"boot/config-{release}").read_text()
+    missing = [option for option in REQUIRED_BUILTINS if not re.search(r"^" + option + r"=y$", config, re.M)]
+    if missing:
+        raise ValueError("This boot recipe requires the T5 built-in storage configuration: " + ", ".join(missing))
+
+
+def snapshot(root=ROOT):
+    """Save current versioned files before pacman removes an older BSP release."""
+    for release in releases(root):
+        initramfs = root / f"boot/initramfs-{release}.img"
+        if not initramfs.is_file():
+            continue
+        destination = root / f"var/lib/a7z/boot-snapshots/{release}"
+        if (destination / "snapshot.json").exists():
+            continue
+        image = root / f"boot/vmlinuz-{release}"
+        if not image.is_file():
+            continue
+        files = [f"boot/vmlinuz-{release}", f"boot/initramfs-{release}.img", f"boot/config-{release}", f"boot/System.map-{release}", f"usr/lib/linux-image-{release}", f"usr/lib/modules/{release}"]
+        for relative in files:
+            source = root / relative
+            target = destination / "payload" / relative
+            if not source.exists():
+                continue
+            target.parent.mkdir(parents=True, exist_ok=True)
+            if source.is_dir():
+                shutil.copytree(source, target, symlinks=True, dirs_exist_ok=True)
+            else:
+                shutil.copy2(source, target, follow_symlinks=False)
+        extlinux = root / "boot/extlinux/extlinux.conf"
+        if extlinux.exists():
+            shutil.copy2(extlinux, destination / "extlinux.conf.saved")
+        with image.open("rb") as stream:
+            image_hash = hashlib.file_digest(stream, "sha256").hexdigest()
+        atomic_write(destination / "snapshot.json", json.dumps({"schema": 1, "kernel_release": release, "image_sha256": image_hash, "paths": files}, indent=2) + "\n")
+        print(f"Preserved boot files and modules for {release}")
+
+
+def restore_missing(root=ROOT):
+    """Restore a removed old version at its original paths, retaining its menu entry."""
+    snapshots = root / "var/lib/a7z/boot-snapshots"
+    for metadata in sorted(snapshots.glob("*/snapshot.json")):
+        saved = json.loads(metadata.read_text())
+        release = check_release(saved["kernel_release"])
+        # Existing versions belong to the installed package or an earlier restore.
+        if (root / f"boot/vmlinuz-{release}").exists():
+            continue
+        payload = metadata.parent / "payload"
+        allowed = {f"boot/vmlinuz-{release}", f"boot/initramfs-{release}.img", f"boot/config-{release}", f"boot/System.map-{release}", f"usr/lib/linux-image-{release}", f"usr/lib/modules/{release}"}
+        for relative in saved["paths"]:
+            if relative not in allowed:
+                raise ValueError(f"Unexpected snapshot path: {relative}")
+            source, target = payload / relative, root / relative
+            if not source.exists():
+                continue
+            target.parent.mkdir(parents=True, exist_ok=True)
+            if source.is_dir():
+                shutil.copytree(source, target, symlinks=True, dirs_exist_ok=True)
+            elif not target.exists():
+                shutil.copy2(source, target, follow_symlinks=False)
+        print(f"Retained removed kernel {release}; its existing extlinux entry remains usable")
+
+
+def update(release, initramfs=False, select=False, root=ROOT):
+    validate_kernel(root, release)
+    cmdline = command_line(root)
+    config_path = root / "boot/extlinux/extlinux.conf"
+    previous = config_path.read_text() if config_path.exists() else ""
+    if initramfs:
+        if root != Path("/"):
+            raise ValueError("Generate initramfs inside the target chroot, not with build-host libraries")
+        # Arch's generic mkinitcpio hook initially creates this unowned preset.
+        # Keep its filename (so the generic hook reuses it), but own the content
+        # through this runtime generator instead of colliding during pacman -U.
+        preset_path = Path("/etc/mkinitcpio.d/linux-radxa-a7z.preset")
+        preset = "\n".join([
+            "# Generated by a7z-boot-update; independent of the Generic kernel preset.",
+            'ALL_config="/etc/mkinitcpio-a7z.conf"',
+            f'ALL_kver="{release}"',
+            "PRESETS=('default')",
+            # The generic mkinitcpio pacman hook runs before our hook. Keep its
+            # output away from the last bootable image if generation fails.
+            f'default_image="/boot/initramfs-{release}.img.pending"',
+            "",
+        ])
+        if preset_path.exists() and preset_path.read_text() != preset:
+            backup = preset_path.with_suffix(".preset.before-a7z")
+            if not backup.exists():
+                shutil.copy2(preset_path, backup)
+        atomic_write(preset_path, preset)
+        run(["depmod", "-a", release])
+        final_image = Path(f"/boot/initramfs-{release}.img")
+        temporary_image = Path(str(final_image) + ".new")
+        try:
+            run(["mkinitcpio", "-k", release, "-c", "/etc/mkinitcpio-a7z.conf", "-g", temporary_image])
+            # gzip magic is also checked by the image assembler; no Debian initrd is reused.
+            with temporary_image.open("rb") as stream:
+                signature = stream.read(6)
+            if not (signature.startswith(b"\x1f\x8b") or signature == b"070701"):
+                raise ValueError("Unexpected initramfs format; expected gzip or early uncompressed cpio")
+            os.replace(temporary_image, final_image)
+            Path(str(final_image) + ".pending").unlink(missing_ok=True)
+        finally:
+            temporary_image.unlink(missing_ok=True)
+    if not (root / f"boot/initramfs-{release}.img").is_file():
+        raise ValueError("Matching initramfs is absent; run with --initramfs before creating a boot entry")
+    # A package hook on a system without extlinux must not establish an implicit
+    # new default; initial image preparation calls --select explicitly.
+    if not previous.strip() and not select:
+        print("Boot files generated; extlinux selection requires explicit --select")
+        return
+    result = render_extlinux(previous, release, cmdline, select)
+    if result != previous:
+        if previous:
+            atomic_write(config_path.with_suffix(".conf.previous"), previous)
+        atomic_write(config_path, result)
+    print(f"Prepared {release}" + (" and selected its extlinux entry" if select else "; existing default preserved"))
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--kernel", help="Exact installed kernel release; default is latest linux-radxa-a7z release")
+    parser.add_argument("--initramfs", action="store_true", help="Run depmod and mkinitcpio inside this target system")
+    parser.add_argument("--select", action="store_true", help="Explicitly make the prepared entry the extlinux default")
+    parser.add_argument("--snapshot", action="store_true", help="Pre-transaction: retain existing versioned boot files and modules")
+    args = parser.parse_args()
+    if os.geteuid() != 0:
+        parser.error("Run as root")
+    try:
+        if args.snapshot:
+            if args.initramfs or args.select:
+                parser.error("--snapshot is a separate pre-transaction action")
+            snapshot()
+            return 0
+        installed = releases()
+        if not installed:
+            print("No A7Z kernel installed; nothing to prepare")
+            return 0
+        release = check_release(args.kernel) if args.kernel else installed[-1]
+        restore_missing()
+        update(release, args.initramfs, args.select)
+    except (OSError, ValueError, subprocess.CalledProcessError) as error:
+        print(f"A7Z boot update failed: {error}", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

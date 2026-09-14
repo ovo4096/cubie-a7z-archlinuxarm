@@ -1,0 +1,7 @@
+#!/bin/sh
+set -eu
+# No global Xorg replacement, SUID, display-manager edits, or module mixing.
+# The -version invocation is safe under QEMU and does not open a display.
+exec /usr/bin/a7z-gpu-run /usr/lib/radxa-a7z-gpu/xorg/Xorg \
+    -modulepath /usr/lib/radxa-a7z-gpu/xorg/modules \
+    -configdir /usr/share/radxa-a7z-gpu/xorg.conf.d "$@"

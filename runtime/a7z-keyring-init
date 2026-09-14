@@ -1,0 +1,37 @@
+#!/usr/bin/python3
+"""Create a unique local pacman keyring and trust packaged public keyrings."""
+import os
+from pathlib import Path
+import subprocess
+
+
+def initialize(root=Path("/"), runner=subprocess.run):
+    marker = root / "var/lib/a7z/keyring-initialized"
+    keyring = root / "etc/pacman.d/gnupg"
+    if marker.is_file() and (keyring / "pubring.gpg").is_file() and (keyring / "trustdb.gpg").is_file():
+        return False
+    if not (root / "usr/share/pacman/keyrings/archlinuxarm.gpg").is_file():
+        raise RuntimeError("Packaged Arch Linux ARM public keyring is missing")
+    environment = dict(os.environ, LC_ALL="C", GNUPGHOME="/etc/pacman.d/gnupg")
+    # pacman-key --populate without names imports all locally packaged keyrings,
+    # including an explicitly installed A7Z repository keyring. No keyserver and
+    # no build-host private key are involved.
+    for arguments in (("--init",), ("--populate",)):
+        runner(["/usr/bin/pacman-key", *arguments], check=True, env=environment,
+               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    marker.parent.mkdir(parents=True, exist_ok=True)
+    marker.write_text("Device-local pacman key initialized from packaged public keyrings.\n")
+    return True
+
+
+def main():
+    if os.geteuid() != 0:
+        raise SystemExit("Run as root")
+    try:
+        initialize()
+    except (OSError, RuntimeError, subprocess.CalledProcessError):
+        raise SystemExit("A7Z pacman keyring initialization failed; retry a7z-keyring-init.service after correcting packaged keyrings")
+
+
+if __name__ == "__main__":
+    main()

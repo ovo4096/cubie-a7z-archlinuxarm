@@ -1,0 +1,35 @@
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = linux-radxa-a7z
+Target = radxa-a7z-wireless
+Target = radxa-a7z-gpu-kmod
+Target = radxa-a7z-base
+Target = mkinitcpio
+Target = systemd
+
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Operation = Remove
+Type = Path
+Target = usr/lib/initcpio/*
+Target = usr/lib/firmware/*
+Target = usr/lib/modules/*/extramodules/
+Target = usr/src/*/dkms.conf
+Target = usr/lib/systemd/systemd
+Target = usr/lib/systemd/systemd-udevd
+Target = usr/bin/cryptsetup
+Target = usr/bin/lvm
+Target = usr/bin/mdadm
+Target = usr/bin/pdata_tools
+Target = usr/lib/libcryptsetup.so
+Target = usr/lib/libp11-kit.so
+Target = usr/lib/libpcsclite.so
+Target = usr/lib/modprobe.d/
+
+[Action]
+Description = Preparing A7Z initramfs and boot entry while preserving the default...
+When = PostTransaction
+Exec = /usr/bin/a7z-boot-update --initramfs

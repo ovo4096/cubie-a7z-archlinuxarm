@@ -1,0 +1,17 @@
+#!/bin/sh
+# Explicit, per-process selection; never source this file into a login shell.
+set -eu
+if [ "$#" -eq 0 ]; then
+    printf '%s\n' 'Usage: a7z-gpu-run COMMAND [ARG...]' >&2
+    exit 2
+fi
+gpu=/usr/lib/radxa-a7z-gpu
+export LD_LIBRARY_PATH="$gpu/lib:$gpu/compat:/usr/lib"
+export LIBGL_DRIVERS_PATH="$gpu/dri"
+export GBM_BACKENDS_PATH="$gpu/lib/gbm"
+export VK_DRIVER_FILES=/usr/share/radxa-a7z-gpu/vulkan/powervr_icd.json
+# Old Vulkan loaders use VK_ICD_FILENAMES. Both refer to the same opt-in ICD.
+export VK_ICD_FILENAMES="$VK_DRIVER_FILES"
+unset __EGL_VENDOR_LIBRARY_FILENAMES __EGL_VENDOR_LIBRARY_DIRS
+unset LIBGL_ALWAYS_SOFTWARE GALLIUM_DRIVER MESA_LOADER_DRIVER_OVERRIDE
+exec "$@"

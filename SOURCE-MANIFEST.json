@@ -1,0 +1,399 @@
+{
+  "schema": 1,
+  "project": "cubie-a7z-archlinuxarm",
+  "created_utc": "2026-09-14T14:04:57.409064+00:00",
+  "scope": "Explicitly allowlisted project source, tests, docs and upstream source lock. No images, packages, private diagnostics, backups or repository history.",
+  "audit": {
+    "result": "PASS",
+    "categories": [
+      "private-key-material",
+      "github-token",
+      "private-ipv4",
+      "windows-user-path",
+      "literal-wifi-secret",
+      "embedded-public-ssh-key"
+    ],
+    "local_document_links": "within allowlist",
+    "limit": "Static checks complement the explicit allowlist; they are not a proof that arbitrary undiscovered secrets cannot exist."
+  },
+  "files": [
+    {
+      "path": ".gitattributes",
+      "bytes": 88,
+      "sha256": "658dbc66099a754356ed97a7691c71ef8a28c30c71393293468f2ba9c6e77d3e",
+      "mode": "0644"
+    },
+    {
+      "path": ".gitignore",
+      "bytes": 205,
+      "sha256": "8b5de31a0822191c2d8ceb4b0d3d5f306145a400ee850c4e756a87f971016d28",
+      "mode": "0644"
+    },
+    {
+      "path": "KDE.zh-CN.md",
+      "bytes": 6474,
+      "sha256": "5d587b16e7c6e9e1b5f6c4847ae51485d407cd3e0da3273501a7618e4b64e594",
+      "mode": "0644"
+    },
+    {
+      "path": "LICENSE",
+      "bytes": 1093,
+      "sha256": "dbd00de96244629d2a3fb54c942f19a940821d0590644f634881bfab39593d86",
+      "mode": "0644"
+    },
+    {
+      "path": "README.md",
+      "bytes": 7765,
+      "sha256": "664c525ae9cc01a6693172f29e5175cf52b0ffcc0d3046e72ed72584564a65ae",
+      "mode": "0644"
+    },
+    {
+      "path": "RELEASE-HYGIENE.zh-CN.md",
+      "bytes": 7715,
+      "sha256": "b35dd488c103016287b8ea3c950fdef11270b40e7700dd0f80665b6e612c5726",
+      "mode": "0644"
+    },
+    {
+      "path": "RELEASE.zh-CN.md",
+      "bytes": 3816,
+      "sha256": "39c5455d5ec4b692e41ea54242f78ec630b9221363a601d9137d14b4353a63eb",
+      "mode": "0644"
+    },
+    {
+      "path": "ROLLING-UPGRADE.zh-CN.md",
+      "bytes": 3981,
+      "sha256": "c5d195f5c60f25546c8f4e14604561ad5a42a3976a7bdabbc1e3c2d513f40337",
+      "mode": "0644"
+    },
+    {
+      "path": "THIRD-PARTY-LICENSES.zh-CN.md",
+      "bytes": 9257,
+      "sha256": "395b3aaf57d82af133666285739f413bd853517aeee97c6f2af2807feca5de43",
+      "mode": "0644"
+    },
+    {
+      "path": "WIFI-FIRSTBOOT.zh-CN.md",
+      "bytes": 6710,
+      "sha256": "7db639072d9b1ee2825f3a18e6b4339f2f81dd489d2818d10c1a12d69bf0642c",
+      "mode": "0644"
+    },
+    {
+      "path": "config/sources.lock.json",
+      "bytes": 2645,
+      "sha256": "10d9dbf6b6dc3274429c01f9ac44c20399218bd64f680887db1ae2208e7bd371",
+      "mode": "0644"
+    },
+    {
+      "path": "gpu/DESKTOP.zh-CN.md",
+      "bytes": 3960,
+      "sha256": "c1fdf96ee225042eb0939cb0e3ea547eb8f41ff63ce86b66ac2d6b1a822b4094",
+      "mode": "0644"
+    },
+    {
+      "path": "gpu/README.zh-CN.md",
+      "bytes": 5753,
+      "sha256": "6d2e8774ac4b3231d54dbd24809ee9e7660f012d7faaebecc56b47e969c9504e",
+      "mode": "0644"
+    },
+    {
+      "path": "gpu/a7z-arch-xorg",
+      "bytes": 225,
+      "sha256": "336687f9618cbd46f05a51b9fd127539ea9dafdee7ea9e513e249d438baf34c9",
+      "mode": "0755"
+    },
+    {
+      "path": "gpu/a7z-gpu-desktop.py",
+      "bytes": 4886,
+      "sha256": "00be94facbfeb6a77454da3315f1ac36238fc0d6ba8e4ed8379ce9e61a7d5e4d",
+      "mode": "0755"
+    },
+    {
+      "path": "gpu/a7z-gpu-probe.py",
+      "bytes": 9867,
+      "sha256": "3a9ef12effa8faa4c7e8af922b782526cbf718d0f4626beaae2aae0946813cf5",
+      "mode": "0755"
+    },
+    {
+      "path": "gpu/a7z-gpu-run",
+      "bytes": 690,
+      "sha256": "9f7df9e7c03681311bfde28c53007170b3f09096896cd9e2bedea1935fdf5857",
+      "mode": "0755"
+    },
+    {
+      "path": "gpu/a7z-xorg",
+      "bytes": 341,
+      "sha256": "0ec78dfb79516887906912b5e468faf26690142b89787bd7b74db0f41b779019",
+      "mode": "0755"
+    },
+    {
+      "path": "gpu/capture-x11.py",
+      "bytes": 10335,
+      "sha256": "e612aeacafdd414a277837ec5bac848b0514aa1b06a1a5b48e7b4f41842313cd",
+      "mode": "0755"
+    },
+    {
+      "path": "gpu/check_runtime.py",
+      "bytes": 1916,
+      "sha256": "68d251af6f61b12af3c12ef2cc1f3f7f2d1d38e8bbcbbe381203e5470b9479a6",
+      "mode": "0755"
+    },
+    {
+      "path": "gpu/test_capture_x11.py",
+      "bytes": 4182,
+      "sha256": "2d4d3bf5a42454b7228ea31273a87bd43e2fa055443037793df3473b0d6383b7",
+      "mode": "0644"
+    },
+    {
+      "path": "gpu/test_desktop_selector.py",
+      "bytes": 4198,
+      "sha256": "34d0cea1e6f2f611408295d322c2d55758353accfe542874175c8cff9114b34c",
+      "mode": "0644"
+    },
+    {
+      "path": "gpu/test_package_gpu.py",
+      "bytes": 3743,
+      "sha256": "dc217c2f9c02840cd2c28933a5d94fe81c493bae26e60a343115987b9eb71984",
+      "mode": "0644"
+    },
+    {
+      "path": "gpu/validate-installed.py",
+      "bytes": 2629,
+      "sha256": "301613a0b6856bfd00923c74f107cb68891b46f9896201975bb66ceb81390413",
+      "mode": "0755"
+    },
+    {
+      "path": "gpu/validate-userspace.sh",
+      "bytes": 1725,
+      "sha256": "cf26796c0cc8c92b0bcae4ba0f77ba3dfc07e0f075b63ccc156aebd96afd6eab",
+      "mode": "0755"
+    },
+    {
+      "path": "packages/base/LICENSE",
+      "bytes": 1093,
+      "sha256": "dbd00de96244629d2a3fb54c942f19a940821d0590644f634881bfab39593d86",
+      "mode": "0644"
+    },
+    {
+      "path": "packages/tests/test_boot_update.py",
+      "bytes": 4420,
+      "sha256": "f2a64e208da504c9110560c8e66e90947af6854f3646ede0b08684327af33561",
+      "mode": "0644"
+    },
+    {
+      "path": "packages/tests/test_bsp_packager.py",
+      "bytes": 8298,
+      "sha256": "bea6b4ea18d6a1e13f6d4bc0afa957f50237a7cd97518e8a933ed403ccc0aeb7",
+      "mode": "0644"
+    },
+    {
+      "path": "runtime/a7z-boot-update",
+      "bytes": 12030,
+      "sha256": "040de2a4b6ca2a6634b9344b09338780d02c4cdb33754cfb2524962d260c2f53",
+      "mode": "0755"
+    },
+    {
+      "path": "runtime/a7z-firstboot",
+      "bytes": 6401,
+      "sha256": "6c664dc0fbed7465567f2ce6de015b8136dd6398db9c8b1472efc41f71c4d700",
+      "mode": "0755"
+    },
+    {
+      "path": "runtime/a7z-firstboot.service",
+      "bytes": 342,
+      "sha256": "3b56783273545b3035a658ca8fd0f5a87f28113c30dd6babe3e4761da7d3d4e8",
+      "mode": "0644"
+    },
+    {
+      "path": "runtime/a7z-grow-root",
+      "bytes": 12020,
+      "sha256": "e429641c9258e62d7c571d4327d9f747253cecfe9af98fe90ad9c5b65977ac48",
+      "mode": "0755"
+    },
+    {
+      "path": "runtime/a7z-grow-root.service",
+      "bytes": 358,
+      "sha256": "014c0477a31562ae59d453a0c5a853279a100c09f6d5d7b654f212f54bd006d8",
+      "mode": "0644"
+    },
+    {
+      "path": "runtime/a7z-install-ufs",
+      "bytes": 22560,
+      "sha256": "bee8d1a484451c1faf74d9aec0d730abfdbafa236aa43a0044e9769c09717150",
+      "mode": "0755"
+    },
+    {
+      "path": "runtime/a7z-keyring-init",
+      "bytes": 1593,
+      "sha256": "54be1be41a89f861821762dffbcec78bd1e4b4ea0e18b21ec94ffde0b47a4b81",
+      "mode": "0755"
+    },
+    {
+      "path": "runtime/a7z-keyring-init.service",
+      "bytes": 480,
+      "sha256": "fbf73501c7b2898e3443eb5d69f5ec0a91e59f6cb856af87e3c43e731d78ec1a",
+      "mode": "0644"
+    },
+    {
+      "path": "runtime/boot/50-a7z-boot-snapshot.hook",
+      "bytes": 256,
+      "sha256": "8fe6025547997d46974ead16d7221e09619c22c998235e24e28f8a3a1aaa54b9",
+      "mode": "0644"
+    },
+    {
+      "path": "runtime/boot/99-a7z-boot-update.hook",
+      "bytes": 876,
+      "sha256": "f455c3e4f09ea16c3c5dc07aa61fb924a1a4052aa90fd80398a45c1b4e8a676b",
+      "mode": "0644"
+    },
+    {
+      "path": "runtime/boot/cmdline",
+      "bytes": 255,
+      "sha256": "94024272dc8a694e767974fd8d7043978dd851104864fb4e9f43aac312ddb653",
+      "mode": "0644"
+    },
+    {
+      "path": "runtime/boot/extlinux.conf.example",
+      "bytes": 625,
+      "sha256": "6a6b654091ca7ae1ef4095779b30569b6e82a4ea76e74d916d131ff6492164b7",
+      "mode": "0644"
+    },
+    {
+      "path": "runtime/boot/linux-radxa-a7z.preset",
+      "bytes": 218,
+      "sha256": "3d095a46988bc17e9a4a75f107aa466afc3aaf83e069bd5aac2340445bb4af5d",
+      "mode": "0644"
+    },
+    {
+      "path": "runtime/boot/mkinitcpio-a7z.conf",
+      "bytes": 547,
+      "sha256": "9a20a76105d1a6f19293cffa21efc5081b6a255593b6e5c8f03d9e26534a5b56",
+      "mode": "0644"
+    },
+    {
+      "path": "tests/integration_image.py",
+      "bytes": 9031,
+      "sha256": "96dc922b3c8bb5a15fe5313a99f190ccd9845b75fa2bb971e8ac9e4d59c0f3b1",
+      "mode": "0755"
+    },
+    {
+      "path": "tests/integration_personalize.py",
+      "bytes": 6718,
+      "sha256": "30ecb46bc1eefd90adf8f156b1c86aaa88add5e567d7fe75bb19bde8f22fb556",
+      "mode": "0755"
+    },
+    {
+      "path": "tests/test_build_safety.py",
+      "bytes": 4308,
+      "sha256": "5dc4067dd292b1e0404fc2fdad1fd3d55f20a30b140c135b1254970247c49c08",
+      "mode": "0644"
+    },
+    {
+      "path": "tests/test_export_source.py",
+      "bytes": 3537,
+      "sha256": "b2dfd9e84b89a7a5cf69c1636003a26c36007d75cfacf6c2a02adb93953506ba",
+      "mode": "0644"
+    },
+    {
+      "path": "tests/test_flash_sd_safety.py",
+      "bytes": 6297,
+      "sha256": "a920a662cb2f419a3865f951c998d607270276efe7654b45a40fc8e9344c6b01",
+      "mode": "0644"
+    },
+    {
+      "path": "tests/test_image_safety.py",
+      "bytes": 10985,
+      "sha256": "4df5f8d85aa1b49a5169c6e5c566372cb4899bba1f7707d6dc15eaca222dc0a5",
+      "mode": "0644"
+    },
+    {
+      "path": "tests/test_personalize_safety.py",
+      "bytes": 6632,
+      "sha256": "0e9183e8a9c479176054908e3379de7500cc65d9fcad178ac1b74bda002979ae",
+      "mode": "0644"
+    },
+    {
+      "path": "tests/test_rootfs_variants.py",
+      "bytes": 3271,
+      "sha256": "dff18dc4d824af959f11698284f48bd0f52dd9ef017925a7f13c943691e8d202",
+      "mode": "0644"
+    },
+    {
+      "path": "tests/test_sanitize.py",
+      "bytes": 10486,
+      "sha256": "36a0f455d0960c67eb85e8f83ff07249a960561bf51c52eccf987daf96deb49d",
+      "mode": "0644"
+    },
+    {
+      "path": "tools/build.py",
+      "bytes": 29369,
+      "sha256": "0e0e87a810f1e01c98ee05525879d8e0d1b4d12518a2302a470e9e97e3ddf4f0",
+      "mode": "0755"
+    },
+    {
+      "path": "tools/export_build_audit.py",
+      "bytes": 9387,
+      "sha256": "64d5fcd7fd8e46fd0fbfaa09efa5defbdefa68509be036a10316743b8ce6bddb",
+      "mode": "0755"
+    },
+    {
+      "path": "tools/export_source.py",
+      "bytes": 9088,
+      "sha256": "504cfd54a575e71f946eeedb50b1f0f89b11d12f0cc60da43007fa536fecba5a",
+      "mode": "0755"
+    },
+    {
+      "path": "tools/flash_sd.py",
+      "bytes": 5807,
+      "sha256": "8c8dc876e154b753af884b4016876fe41c2e483c2ceeec27b65537f97a28593b",
+      "mode": "0755"
+    },
+    {
+      "path": "tools/image.py",
+      "bytes": 15983,
+      "sha256": "cd4d5f656b69317f9668b7994f01b930161cbccb6ca6040515d740cb1db98736",
+      "mode": "0755"
+    },
+    {
+      "path": "tools/package_base.py",
+      "bytes": 5434,
+      "sha256": "23fe1e2f860ecb6caebbfef0079f83b3604912ef88e44e7608fd174fe46f2c20",
+      "mode": "0755"
+    },
+    {
+      "path": "tools/package_bsp.py",
+      "bytes": 25502,
+      "sha256": "6a93bd398e403a0c2ee99048f5baa6e56a12c769e23db61b8983a264453d296b",
+      "mode": "0755"
+    },
+    {
+      "path": "tools/package_gpu.py",
+      "bytes": 21097,
+      "sha256": "fa67d79319ec97e538ce8a02d5cdeb8daecaaf74516809a0b69c4ab4595d155e",
+      "mode": "0755"
+    },
+    {
+      "path": "tools/personalize.py",
+      "bytes": 16025,
+      "sha256": "6321af91cc4fd8fca774d016a5135f6670f53e257ed999cb7e39fc6cde619362",
+      "mode": "0755"
+    },
+    {
+      "path": "tools/rootfs.py",
+      "bytes": 15962,
+      "sha256": "098abd5989db252ed5616bd4d0929f15aad382d1536d5750af94d95e2c154db8",
+      "mode": "0755"
+    },
+    {
+      "path": "tools/sanitize.py",
+      "bytes": 21798,
+      "sha256": "d8a40e6970505e55ea6d79fa76bf8477c189a2afdecd9eff9eeede7d67e4e3e7",
+      "mode": "0755"
+    },
+    {
+      "path": "tools/sources.py",
+      "bytes": 2276,
+      "sha256": "251928330391429be975810d98abc19192c1790212a8c2d0396c4ba876d535e3",
+      "mode": "0755"
+    }
+  ]
+}

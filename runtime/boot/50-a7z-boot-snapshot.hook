@@ -1,0 +1,11 @@
+[Trigger]
+Operation = Upgrade
+Operation = Remove
+Type = Package
+Target = linux-radxa-a7z
+
+[Action]
+Description = Preserving the current A7Z kernel, initramfs, DTBs and modules...
+When = PreTransaction
+Exec = /usr/bin/a7z-boot-update --snapshot
+AbortOnFail

@@ -1,0 +1,1 @@
+root=UUID=@ROOT_UUID@ rootfstype=ext4 rw rootwait console=ttyAS0,115200n8 console=tty1 earlycon consoleblank=0 clk_ignore_unused coherent_pool=2M irqchip.gicv3_pseudo_nmi=0 cgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory swapaccount=1 kasan=off

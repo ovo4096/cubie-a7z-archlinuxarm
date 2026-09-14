@@ -1,0 +1,56 @@
+{
+  "schema": 1,
+  "board": "radxa-cubie-a7z",
+  "vendor_release": "rsdk-t5",
+  "kernel_release": "6.6.98-4-aw2511",
+  "source_date_epoch": 1785826451,
+  "artifacts": [
+    {
+      "role": "vendor-rootfs",
+      "name": "radxa-a733_trixie_cli_t5.rootfs.tar.xz",
+      "url": "https://github.com/radxa-build/radxa-a733/releases/download/rsdk-t5/radxa-a733_trixie_cli_t5.rootfs.tar.xz",
+      "sha256": "90087b0702039dda396ff9d99f2d2b6b5eff3f67181bc0f2c956bc3cbc1779e6",
+      "size": 614981632
+    },
+    {
+      "role": "vendor-metadata",
+      "name": "radxa-a733_trixie_cli_t5.manifest",
+      "url": "https://github.com/radxa-build/radxa-a733/releases/download/rsdk-t5/radxa-a733_trixie_cli_t5.manifest",
+      "sha256": "09415cba07ab9438786c30c5dc66cbad4b63bfd14c6663888e177a21ba282eab"
+    },
+    {
+      "role": "vendor-metadata",
+      "name": "radxa-a733_trixie_cli_t5.config.yaml",
+      "url": "https://github.com/radxa-build/radxa-a733/releases/download/rsdk-t5/radxa-a733_trixie_cli_t5.config.yaml",
+      "sha256": "918e0f7d2c832d0b6cfb9fcce689ce6d4296542957e0a5541739cac7b10c55f2"
+    },
+    {
+      "role": "vendor-metadata",
+      "name": "radxa-a733_trixie_cli_t5.build-512-image",
+      "url": "https://github.com/radxa-build/radxa-a733/releases/download/rsdk-t5/radxa-a733_trixie_cli_t5.build-512-image",
+      "sha256": "1788260c0eb2f1e3b404ab509054505cda87d582dfa2a582bc13ab715b716c43"
+    },
+    {
+      "role": "vendor-metadata",
+      "name": "radxa-a733_trixie_cli_t5.build-4096-image",
+      "url": "https://github.com/radxa-build/radxa-a733/releases/download/rsdk-t5/radxa-a733_trixie_cli_t5.build-4096-image",
+      "sha256": "bdf1e65626cbb27a5dd06baf612c32f750bcace9a41d1a6f1966123140991326"
+    },
+    {
+      "role": "arch-rootfs",
+      "name": "ArchLinuxARM-aarch64-latest.tar.gz",
+      "url": "https://mirrors.tuna.tsinghua.edu.cn/archlinuxarm/os/ArchLinuxARM-aarch64-latest.tar.gz",
+      "sha256": "42a4eeaa038994ffd31fa173256ef2f0ef511358eeb41b9ea1f8626391b9b319",
+      "size": 829367415,
+      "upstream_md5": "23eec86365b24f7913c403e8f4e8719b",
+      "note": "Seed observed 2026-09-14; upstream Last-Modified 2026-08-05. SHA256 pinned locally after HTTPS download and upstream MD5 match. Retain the archive because upstream latest is mutable."
+    }
+  ],
+  "source_revisions": {
+    "linux-aw2511": "8c5a51bc80717b33cb2a1c66705f67592b772c92",
+    "kernel": "61f3fe291c7a0ca97a038194bb242b133971b76e",
+    "allwinner-bsp": "f51e1e6195d4350abc590bff852e213279e660a6",
+    "allwinner-device": "ca4d6c33e4862cf976037ee6305712eb7b3a92b8",
+    "u-boot-dlan17": "039e1540b8e3fc92242da7a391e3de3eed1d3bb2"
+  }
+}

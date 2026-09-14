@@ -1,0 +1,5 @@
+#!/bin/sh
+# LightDM inserts display/seat/auth arguments immediately after this executable.
+# Keep the real Xorg command inside the launcher so those arguments stay intact.
+set -eu
+exec /usr/bin/a7z-gpu-run /usr/lib/Xorg "$@"

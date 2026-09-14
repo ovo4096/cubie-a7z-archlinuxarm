@@ -1,0 +1,14 @@
+[Unit]
+Description=Expand the final A7Z SD/UFS root partition to its device capacity
+After=local-fs.target
+Before=display-manager.service
+ConditionPathExists=/etc/a7z/auto-grow-root
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/a7z-grow-root --apply
+ExecStartPost=/usr/bin/rm -f /etc/a7z/auto-grow-root
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,221 @@
+#!/usr/bin/env python3
+"""Preview or expand the current A7Z ext4 root partition to its SD/UFS capacity.
+
+Default is a read-only preview. --apply saves GPT backups, relocates the backup
+GPT, expands only the final partition, updates the kernel with partx, and grows
+ext4 online. Needs python3, util-linux (sfdisk with --relocate), e2fsprogs.
+Never moves a partition start, formats a filesystem, or changes its UUID.
+"""
+
+import argparse
+import datetime
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import struct
+import subprocess
+import sys
+import zlib
+
+
+def run(*args, capture=False, input=None):
+    result = subprocess.run([str(arg) for arg in args], input=input, text=True, check=False,
+                            stdout=subprocess.PIPE if capture else None)
+    if result.returncode:
+        raise RuntimeError(f"Command failed ({result.returncode}): {' '.join(map(str, args))}")
+    return result.stdout.strip() if capture else None
+
+
+def read_table(disk):
+    return json.loads(run("sfdisk", "--json", disk, capture=True))["partitiontable"]
+
+
+def gpt_bounds(disk, sector_size, disk_bytes):
+    with disk.open("rb", buffering=0) as handle:
+        handle.seek(sector_size)
+        raw = handle.read(sector_size)
+    if raw[:8] != b"EFI PART":
+        raise ValueError("Current root disk is not GPT")
+    size, checksum = struct.unpack_from("<II", raw, 12)
+    if not 92 <= size <= sector_size:
+        raise ValueError("Invalid GPT header size")
+    checked = bytearray(raw[:size])
+    checked[16:20] = bytes(4)
+    if zlib.crc32(checked) & 0xFFFFFFFF != checksum:
+        raise ValueError("GPT primary header CRC mismatch; repair manually before resizing")
+    count, entry_size = struct.unpack_from("<II", raw, 80)
+    if count != 128 or entry_size != 128:
+        raise ValueError("Expected the standard 128-entry T5 GPT")
+    entries_lba = struct.unpack_from("<Q", raw, 72)[0]
+    entries_crc = struct.unpack_from("<I", raw, 88)[0]
+    with disk.open("rb", buffering=0) as handle:
+        handle.seek(entries_lba * sector_size)
+        entries = handle.read(count * entry_size)
+    if len(entries) != count * entry_size or zlib.crc32(entries) & 0xFFFFFFFF != entries_crc:
+        raise ValueError("GPT partition-table CRC mismatch; repair manually before resizing")
+    sectors = disk_bytes // sector_size
+    entries_sectors = (count * entry_size + sector_size - 1) // sector_size
+    return {"last_usable_lba": sectors - entries_sectors - 2,
+            "old_backup_lba": struct.unpack_from("<Q", raw, 32)[0],
+            "new_backup_lba": sectors - 1}
+
+
+def validate_layout(table, root_device, disk_bytes, sector_size, last_usable):
+    if table.get("label") != "gpt" or table.get("unit") != "sectors":
+        raise ValueError("Only GPT disks with sector-based partition descriptions are supported")
+    if int(table.get("sectorsize", sector_size)) != sector_size or sector_size not in (512, 4096):
+        raise ValueError("Unsupported/inconsistent logical sector size")
+    parts = table["partitions"]
+    roots = [part for part in parts if Path(part["node"]).resolve() == root_device]
+    if len(roots) != 1:
+        raise ValueError("Current root partition is missing or ambiguous in GPT")
+    root = roots[0]
+    ordered = sorted(parts, key=lambda part: part["start"])
+    if ordered[-1] != root:
+        raise ValueError("Current root is not the final partition on its disk")
+    previous_end = -1
+    for part in ordered:
+        end = int(part["start"]) + int(part["size"]) - 1
+        if int(part["start"]) <= previous_end or end > last_usable or part["size"] <= 0:
+            raise ValueError("Overlapping, invalid or out-of-bounds partitions")
+        previous_end = end
+    if root["type"].lower() != "0fc63daf-8483-4772-8e79-3d69d8477de4":
+        raise ValueError("Root partition does not use the Linux filesystem GPT type")
+    if disk_bytes < 4 * 1024**3:
+        raise ValueError("Disk is too small for a supported A7Z data LUN/SD card")
+    new_size = last_usable - int(root["start"]) + 1
+    if new_size < int(root["size"]):
+        raise ValueError("Calculated operation would shrink root; refusing")
+    return root, new_size
+
+
+def plan_for_root(mountpoint="/", allow_test_loop=False):
+    records = json.loads(run("findmnt", "--json", "--target", mountpoint, "--output",
+                             "SOURCE,TARGET,FSTYPE,OPTIONS", capture=True))["filesystems"]
+    if len(records) != 1 or records[0]["target"] != str(Path(mountpoint).resolve()):
+        raise ValueError("Requested root mountpoint does not identify a single exact mount")
+    mounted = records[0]
+    if mounted["fstype"] != "ext4" or "rw" not in mounted["options"].split(","):
+        raise ValueError("Current root must be a writable ext4 filesystem")
+    rootdev = Path(mounted["source"]).resolve(strict=True)
+    if not rootdev.is_block_device():
+        raise ValueError("Current root is not a direct block-device partition")
+    sysroot = Path("/sys/class/block") / rootdev.name
+    if not (sysroot / "partition").is_file():
+        raise ValueError("Root must be a direct disk partition; mapped/LVM roots are not supported")
+    partnum = int((sysroot / "partition").read_text().strip())
+    parent = run("lsblk", "--nodeps", "--noheadings", "--paths", "--output", "PKNAME", rootdev, capture=True)
+    disk = Path(parent).resolve(strict=True)
+    sysdisk = Path("/sys/class/block") / disk.name
+    if (sysdisk / "ro").read_text().strip() != "0":
+        raise ValueError("Root disk is read-only")
+    if re.fullmatch(r"sd[a-z]+", disk.name):
+        device = (sysdisk / "device").resolve(strict=True)
+        host = re.search(r"/(host\d+)(?:/|$)", str(device))
+        if not host or (Path("/sys/class/scsi_host") / host.group(1) / "proc_name").read_text().strip() != "ufshcd":
+            raise ValueError("SCSI root disk is not a UFS controller disk")
+        lun = re.fullmatch(r"\d+:\d+:\d+:(\d+)", device.name)
+        if not lun or not 0 <= int(lun.group(1)) <= 7:
+            raise ValueError("Refusing special UFS LUN")
+    elif re.fullmatch(r"mmcblk\d+", disk.name):
+        if "/mmc_host/" not in str((sysdisk / "device").resolve(strict=True)):
+            raise ValueError("MMC controller path is missing")
+    elif allow_test_loop and re.fullmatch(r"loop\d+", disk.name):
+        if not (sysdisk / "loop/backing_file").is_file():
+            raise ValueError("Test loop device has no regular-file backing")
+    else:
+        raise ValueError("Current root must be on an A7Z UFS or MMC disk")
+    sector = int(run("blockdev", "--getss", disk, capture=True))
+    size = int(run("blockdev", "--getsize64", disk, capture=True))
+    bounds = gpt_bounds(disk, sector, size)
+    table = read_table(disk)
+    root, new_size = validate_layout(table, rootdev, size, sector, bounds["last_usable_lba"])
+    fs_uuid = run("blkid", "-s", "UUID", "-o", "value", rootdev, capture=True)
+    if not fs_uuid:
+        raise ValueError("Root filesystem UUID is missing")
+    return {"disk": str(disk), "root_device": str(rootdev), "root_mount": mounted["target"],
+            "partition_number": partnum, "sector_size": sector, "disk_bytes": size,
+            "start_lba": int(root["start"]), "old_size_sectors": int(root["size"]),
+            "new_size_sectors": new_size, "root_filesystem_uuid": fs_uuid,
+            "growth_bytes": (new_size - int(root["size"])) * sector, **bounds,
+            "original_table": table}
+
+
+def assert_preserved(original, updated, root_device, new_size):
+    if original.get("id") != updated.get("id") or len(original["partitions"]) != len(updated["partitions"]):
+        raise RuntimeError("Disk UUID or partition count changed during expansion")
+    for before, after in zip(original["partitions"], updated["partitions"]):
+        for key in ("node", "start", "type", "uuid", "name", "attrs", "bootable"):
+            if before.get(key) != after.get(key):
+                raise RuntimeError(f"Partition identity/start/attributes changed: {key}")
+        expected = new_size if before["node"] == root_device else before["size"]
+        if int(after["size"]) != expected:
+            raise RuntimeError("An unexpected partition size changed")
+
+
+def apply_plan(plan, backup_parent):
+    disk = Path(plan["disk"])
+    rootdev = Path(plan["root_device"])
+    backup = backup_parent / datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ")
+    backup.mkdir(parents=True, mode=0o700, exist_ok=False)
+    (backup / "plan.json").write_text(json.dumps(plan, indent=2) + "\n")
+    (backup / "table.sfdisk").write_text(run("sfdisk", "--dump", disk, capture=True) + "\n")
+    run("sfdisk", "--backup-pt-sectors", "--backup-file", backup / "gpt", disk)
+    os.sync()
+    print(f"GPT backup saved to {backup}", flush=True)
+    if read_table(disk) != plan["original_table"] or int(run("blockdev", "--getsize64", disk, capture=True)) != plan["disk_bytes"]:
+        raise RuntimeError("Disk geometry changed since preview; refusing to write")
+    if plan["old_backup_lba"] != plan["new_backup_lba"]:
+        run("sfdisk", "--no-reread", "--no-tell-kernel", "--relocate", "gpt-bak-std", disk)
+    if plan["growth_bytes"]:
+        # -N updates only this entry; omitted identity/type/attributes are preserved.
+        # Suppress automatic signature wiping and full-disk BLKRRPART on the mounted root disk.
+        run("sfdisk", "--no-reread", "--no-tell-kernel", "--wipe", "never", "--wipe-partitions", "never",
+            "-N", plan["partition_number"], disk, input=f"start={plan['start_lba']}, size={plan['new_size_sectors']}\n")
+    updated = read_table(disk)
+    assert_preserved(plan["original_table"], updated, str(rootdev), plan["new_size_sectors"])
+    run("sfdisk", "--verify", disk)
+    try:
+        run("partx", "--update", "--nr", plan["partition_number"], disk)
+    except RuntimeError as exc:
+        raise RuntimeError("GPT expansion succeeded but the kernel could not update root size. Reboot, then rerun --apply; filesystem has not been resized") from exc
+    expected_bytes = plan["new_size_sectors"] * plan["sector_size"]
+    if int(run("blockdev", "--getsize64", rootdev, capture=True)) != expected_bytes:
+        raise RuntimeError("Kernel root partition size differs from GPT. Reboot, then rerun --apply")
+    run("resize2fs", rootdev)
+    if run("blkid", "-s", "UUID", "-o", "value", rootdev, capture=True) != plan["root_filesystem_uuid"]:
+        raise RuntimeError("Filesystem UUID changed unexpectedly")
+    bounds = gpt_bounds(disk, plan["sector_size"], plan["disk_bytes"])
+    if bounds["old_backup_lba"] != plan["new_backup_lba"]:
+        raise RuntimeError("Backup GPT was not relocated to the device end")
+    os.sync()
+    print("Root expansion complete; partition start, disk/partition/filesystem UUIDs preserved.")
+    return backup
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--apply", action="store_true", help="back up GPT and apply the displayed expansion")
+    parser.add_argument("--backup-dir", default="/var/lib/a7z/gpt-backups", help="parent directory for GPT backups")
+    args = parser.parse_args()
+    try:
+        if sys.platform != "linux" or os.geteuid() != 0:
+            raise ValueError("Run on Linux as root (sudo), including for the read-only preview")
+        missing = [command for command in ("findmnt", "lsblk", "sfdisk", "partx", "blockdev", "blkid", "resize2fs")
+                   if not shutil.which(command)]
+        if missing:
+            raise ValueError("Missing tools: " + ", ".join(missing))
+        plan = plan_for_root()
+        print(json.dumps(plan, indent=2), flush=True)
+        if args.apply:
+            apply_plan(plan, Path(args.backup_dir))
+        else:
+            print("Read-only preview. Use --apply to back up GPT and expand the current root.")
+    except (OSError, RuntimeError, ValueError, KeyError) as exc:
+        parser.exit(1, f"Root expansion refused/failed: {exc}\n")
+
+
+if __name__ == "__main__":
+    main()

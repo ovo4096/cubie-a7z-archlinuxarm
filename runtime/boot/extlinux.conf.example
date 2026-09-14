@@ -1,0 +1,13 @@
+# Example only. a7z-boot-update --initramfs --select creates the live config.
+# Keeping the extlinux fdtdir path also keeps T5 U-Boot's ARISC/SCP boot hook.
+default a7z-6.6.98-4-aw2511
+menu title Arch Linux ARM - Radxa A7Z
+prompt 1
+timeout 30
+
+label a7z-6.6.98-4-aw2511
+    menu label Arch Linux ARM A7Z 6.6.98-4-aw2511
+    linux /boot/vmlinuz-6.6.98-4-aw2511
+    initrd /boot/initramfs-6.6.98-4-aw2511.img
+    fdtdir /usr/lib/linux-image-6.6.98-4-aw2511/
+    append root=UUID=@ROOT_UUID@ rootfstype=ext4 rw rootwait console=ttyAS0,115200n8 console=tty1 earlycon clk_ignore_unused coherent_pool=2M irqchip.gicv3_pseudo_nmi=0

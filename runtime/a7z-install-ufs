@@ -1,0 +1,427 @@
+#!/usr/bin/env python3
+"""Install an uncompressed A7Z 4096-byte T5-layout image from SD onto UFS.
+
+Examples:
+  sudo a7z-install-ufs --image a7z-ufs.img --target /dev/sda --dry-run
+  sudo a7z-install-ufs --image a7z-ufs.img --target /dev/sda --grow-root
+
+The second command requires typing ERASE /dev/sda. For an already reviewed
+unattended installation, pass --confirm /dev/sda explicitly. The target is
+always specified by the caller: this program never chooses a disk to erase.
+Requires Python 3, util-linux (sfdisk with --relocate), gdisk and e2fsprogs.
+"""
+
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import stat
+import struct
+import subprocess
+import sys
+import uuid
+import zlib
+
+MIB = 1024 * 1024
+MIN_UFS_BYTES = 4 * 1024**3
+SECTOR_SIZE = 4096
+LINUX_TYPE = "0fc63daf-8483-4772-8e79-3d69d8477de4"
+EFI_TYPE = "c12a7328-f81f-11d2-ba4b-00a0c93ec93b"
+BLKRRPART = 0x125F
+
+
+def run(*args, capture=False, ok=(0,), input=None):
+    result = subprocess.run([str(arg) for arg in args], text=True, check=False,
+                            stdout=subprocess.PIPE if capture else None, input=input)
+    if result.returncode not in ok:
+        raise RuntimeError(f"Command failed ({result.returncode}): {' '.join(map(str, args))}")
+    return result.stdout.strip() if capture else result.returncode
+
+
+def gpt_header(handle, sector_size, lba):
+    handle.seek(lba * sector_size)
+    raw = handle.read(sector_size)
+    if len(raw) < 92 or raw[:8] != b"EFI PART":
+        raise ValueError(f"Missing GPT header at LBA {lba} for {sector_size}-byte sectors")
+    version, size, checksum, reserved = struct.unpack_from("<4I", raw, 8)
+    if version != 0x10000 or not 92 <= size <= sector_size or reserved:
+        raise ValueError("Unsupported/invalid GPT header")
+    checked = bytearray(raw[:size])
+    checked[16:20] = bytes(4)
+    if zlib.crc32(checked) & 0xFFFFFFFF != checksum:
+        raise ValueError("GPT header CRC mismatch")
+    current, backup, first, last = struct.unpack_from("<4Q", raw, 24)
+    entries_lba, count, entry_size, entries_crc = struct.unpack_from("<Q3I", raw, 72)
+    if current != lba or not 1 <= count <= 128 or entry_size != 128:
+        raise ValueError("Unsupported GPT entry geometry")
+    handle.seek(entries_lba * sector_size)
+    entries_raw = handle.read(count * entry_size)
+    if len(entries_raw) != count * entry_size or zlib.crc32(entries_raw) & 0xFFFFFFFF != entries_crc:
+        raise ValueError("GPT partition table CRC mismatch")
+    parts = []
+    for index in range(count):
+        data = entries_raw[index * entry_size:(index + 1) * entry_size]
+        if data[:16] == bytes(16):
+            continue
+        start, end, attributes = struct.unpack_from("<3Q", data, 32)
+        parts.append({"number": index + 1, "type": str(uuid.UUID(bytes_le=data[:16])),
+                      "uuid": str(uuid.UUID(bytes_le=data[16:32])), "start": start,
+                      "end": end, "attributes": attributes,
+                      "name": data[56:128].decode("utf-16-le").rstrip("\0")})
+    return {"current": current, "backup": backup, "first": first, "last": last,
+            "disk_guid": str(uuid.UUID(bytes_le=raw[56:72])), "entries_lba": entries_lba,
+            "entries_raw": entries_raw, "partitions": parts}
+
+
+def inspect_image(image):
+    info = image.stat()
+    if not stat.S_ISREG(info.st_mode) or info.st_size % SECTOR_SIZE:
+        raise ValueError("Image must be a regular, uncompressed 4096-byte-sector .img file")
+    with image.open("rb") as handle:
+        handle.seek(0)
+        mbr = handle.read(512)
+        if len(mbr) != 512 or mbr[510:512] != b"\x55\xaa" or mbr[450] != 0xEE:
+            raise ValueError("Image is missing a protective MBR")
+        header = gpt_header(handle, SECTOR_SIZE, 1)
+        sectors = info.st_size // SECTOR_SIZE
+        if header["backup"] != sectors - 1 or not 6 <= header["first"] <= 32768:
+            raise ValueError("Image GPT disk bounds do not match file size")
+        if not header["first"] <= header["last"] < sectors - 5:
+            raise ValueError("Image GPT usable bounds overlap its backup table")
+        if header["entries_lba"] != 2:
+            raise ValueError("Unexpected primary GPT entry-table location")
+        backup = gpt_header(handle, SECTOR_SIZE, sectors - 1)
+        if (backup["backup"] != 1 or backup["disk_guid"] != header["disk_guid"] or
+                backup["entries_raw"] != header["entries_raw"] or
+                backup["first"] != header["first"] or backup["last"] != header["last"] or
+                backup["entries_lba"] != sectors - 5):
+            raise ValueError("Primary and backup GPT disagree")
+        parts = header["partitions"]
+        if [part["number"] for part in parts] != [1, 2, 3]:
+            raise ValueError("Expected exactly config/efi/rootfs partitions numbered 1, 2, 3")
+        if len({part["uuid"] for part in parts}) != 3:
+            raise ValueError("Duplicate partition UUIDs in image")
+        for part, start, end, kind in zip(parts, (32768, 65536, 142336),
+                                         (65535, 142335, None), (LINUX_TYPE, EFI_TYPE, LINUX_TYPE)):
+            if part["start"] != start or (end is not None and part["end"] != end) or part["type"] != kind:
+                raise ValueError("Image does not have the pinned T5 UFS partition layout")
+            if not header["first"] <= part["start"] <= part["end"] <= header["last"]:
+                raise ValueError("Partition outside usable disk bounds")
+            if part["number"] in (2, 3) and not part["attributes"] & 4:
+                raise ValueError("EFI/rootfs partition is missing the T5 legacy bootable attribute")
+        if parts[2]["end"] - parts[2]["start"] + 1 < 256 * MIB // SECTOR_SIZE:
+            raise ValueError("Root partition is implausibly small")
+        handle.seek(parts[2]["start"] * SECTOR_SIZE + 1024)
+        superblock = handle.read(1024)
+        if superblock[56:58] != b"\x53\xef":
+            raise ValueError("Root partition does not contain an ext4 filesystem")
+        root_uuid = str(uuid.UUID(bytes=superblock[104:120]))
+    return {"image": str(image), "image_bytes": info.st_size, "sector_size": SECTOR_SIZE,
+            "disk_guid": header["disk_guid"], "partitions": parts, "root_uuid": root_uuid}
+
+
+def digest_file(path, limit=None):
+    digest = hashlib.sha256()
+    remaining = limit
+    with path.open("rb", buffering=0) as handle:
+        while remaining is None or remaining:
+            chunk = handle.read(8 * MIB if remaining is None else min(8 * MIB, remaining))
+            if not chunk:
+                if remaining:
+                    raise ValueError("Unexpected end of file during checksum verification")
+                break
+            digest.update(chunk)
+            if remaining is not None:
+                remaining -= len(chunk)
+    return digest.hexdigest()
+
+
+def expected_digest(image, supplied):
+    if supplied:
+        checksum = supplied.lower()
+    else:
+        sidecar = Path(str(image) + ".sha256")
+        if not sidecar.is_file():
+            raise ValueError(f"Provide --sha256 HEX or the generated sidecar {sidecar.name}")
+        lines = [line for line in sidecar.read_text().splitlines() if line.strip()]
+        if len(lines) != 1:
+            raise ValueError("Image .sha256 sidecar must contain exactly one checksum")
+        match = re.fullmatch(r"([0-9A-Fa-f]{64}) [ *](.+)", lines[0])
+        if not match or match.group(2) != image.name:
+            raise ValueError("Checksum sidecar filename does not match the image")
+        checksum = match.group(1).lower()
+    if not re.fullmatch(r"[0-9a-f]{64}", checksum):
+        raise ValueError("SHA256 must contain exactly 64 hexadecimal characters")
+    return checksum
+
+
+def flatten(nodes):
+    for node in nodes:
+        yield node
+        yield from flatten(node.get("children", []))
+
+
+def validate_target(record, image_bytes, controller, mounted_devices, swap_devices, holders):
+    """Pure preflight policy, kept separate so refusal cases can be tested without disks."""
+    if record["type"] != "disk":
+        raise ValueError("Target must be a whole disk, not a partition or mapped device")
+    if controller != "ufshcd":
+        raise ValueError("Target is not attached to the kernel ufshcd UFS controller")
+    if record.get("ro") not in (False, 0, "0"):
+        raise ValueError("Target is read-only")
+    if int(record["log-sec"]) != SECTOR_SIZE:
+        raise ValueError("Target logical sector size differs from the 4096-byte UFS image")
+    if int(record["size"]) < MIN_UFS_BYTES:
+        raise ValueError("Refusing small UFS LUN (including the 4 MiB boot LUNs)")
+    if int(record["size"]) < image_bytes:
+        raise ValueError("Target is smaller than the image")
+    for node in flatten([record]):
+        if any(node.get("mountpoints") or []) or node.get("maj:min") in mounted_devices:
+            raise ValueError(f"Target or descendant is mounted (including current root): {node['name']}")
+        if node.get("maj:min") in swap_devices:
+            raise ValueError(f"Target or descendant is active swap: {node['name']}")
+        if holders.get(Path(node["name"]).name):
+            raise ValueError(f"Target has a device-mapper/RAID holder: {node['name']}")
+
+
+def inspect_target(target, image_bytes):
+    if not target.is_block_device():
+        raise ValueError("Target must be an existing Linux block device")
+    name = target.name
+    if not re.fullmatch(r"sd[a-z]+", name):
+        raise ValueError("Target must be a whole UFS SCSI disk, e.g. /dev/sda")
+    sysblock = Path("/sys/class/block") / name
+    if (sysblock / "partition").exists():
+        raise ValueError("Target is a partition")
+    device_path = (sysblock / "device").resolve(strict=True)
+    host_match = re.search(r"/(host\d+)(?:/|$)", str(device_path))
+    scsi = re.fullmatch(r"\d+:\d+:\d+:(\d+)", device_path.name)
+    if not host_match or not scsi:
+        raise ValueError("Cannot identify UFS SCSI host and LUN from sysfs")
+    controller = (Path("/sys/class/scsi_host") / host_match.group(1) / "proc_name").read_text().strip()
+    # General-purpose data LUNs are 0..7; reject well-known UFS boot/RPMB LUN addresses.
+    lun = int(scsi.group(1))
+    if not 0 <= lun <= 7:
+        raise ValueError(f"Refusing special UFS LUN {lun}")
+    data = json.loads(run("lsblk", "--json", "--bytes", "--paths", "--output",
+                          "NAME,KNAME,TYPE,SIZE,LOG-SEC,MAJ:MIN,MOUNTPOINTS,RO", target, capture=True))
+    if len(data["blockdevices"]) != 1 or Path(data["blockdevices"][0]["name"]).resolve() != target:
+        raise ValueError("Unexpected lsblk target identity")
+    record = data["blockdevices"][0]
+    mounted = {line.split()[2] for line in Path("/proc/self/mountinfo").read_text().splitlines()}
+    swaps = set()
+    for line in Path("/proc/swaps").read_text().splitlines()[1:]:
+        fields = line.split()
+        if fields:
+            swap = Path(fields[0]).stat()
+            if stat.S_ISBLK(swap.st_mode):
+                swaps.add(f"{os.major(swap.st_rdev)}:{os.minor(swap.st_rdev)}")
+    holders = {}
+    for node in flatten([record]):
+        node_name = Path(node["name"]).name
+        holders[node_name] = [path.name for path in (Path("/sys/class/block") / node_name / "holders").iterdir()]
+    validate_target(record, image_bytes, controller, mounted, swaps, holders)
+    return {"target": str(target), "bytes": int(record["size"]), "sector_size": int(record["log-sec"]),
+            "major_minor": record["maj:min"], "sysfs_device": str(device_path),
+            "controller": controller, "lun": lun,
+            "model": (sysblock / "device/model").read_text().strip()}
+
+
+def verify_written(handle, size, expected):
+    handle.seek(0)
+    digest = hashlib.sha256()
+    remaining = size
+    while remaining:
+        chunk = handle.read(min(8 * MIB, remaining))
+        if not chunk:
+            raise RuntimeError("Unexpected end of target during read-back")
+        digest.update(chunk)
+        remaining -= len(chunk)
+    if digest.hexdigest() != expected:
+        raise RuntimeError("Written-image read-back SHA256 mismatch; installation is incomplete")
+
+
+def write_verified_image(source, destination, size, expected):
+    """Write at most the reviewed byte range, then reject any source changes."""
+    before = os.fstat(source.fileno())
+    if before.st_size != size:
+        raise RuntimeError("Source image size changed before writing; installation is incomplete")
+    written_digest = hashlib.sha256()
+    remaining = size
+    while remaining:
+        chunk = source.read(min(8 * MIB, remaining))
+        if not chunk:
+            raise RuntimeError("Source image was truncated while writing; installation is incomplete")
+        written_digest.update(chunk)
+        view = memoryview(chunk)
+        while view:
+            written = destination.write(view)
+            if not written:
+                raise RuntimeError("Short write to UFS target")
+            view = view[written:]
+        remaining -= len(chunk)
+    after = os.fstat(source.fileno())
+    if ((before.st_size, before.st_mtime_ns) != (after.st_size, after.st_mtime_ns) or
+            written_digest.hexdigest() != expected):
+        raise RuntimeError("Source image changed while writing; installation is incomplete")
+
+
+def reread_partition_table(destination):
+    """Refresh partitions using the fd which already owns the whole-disk claim.
+
+    Linux 6.6 refuses BLKRRPART from another open while O_EXCL is held here.
+    Do not close/reopen the device or fall back to an external blockdev command.
+    """
+    import fcntl
+    descriptor = destination.fileno()
+    os.fsync(descriptor)
+    fcntl.ioctl(descriptor, BLKRRPART, 0)
+
+
+def grow_root_partition(destination, target, original_parts):
+    """Change only root's GPT size; the caller refreshes the kernel via its fd."""
+    current = gpt_header(destination, SECTOR_SIZE, 1)
+    if len(current["partitions"]) != 3:
+        raise RuntimeError("Unexpected partition count before root growth")
+    for original, observed in zip(original_parts, current["partitions"]):
+        if any(original[key] != observed[key] for key in ("number", "start", "end", "uuid", "type", "attributes")):
+            raise RuntimeError("Partition changed unexpectedly before root growth")
+    root = current["partitions"][2]
+    if root["number"] != 3 or current["last"] < root["end"]:
+        raise RuntimeError("Root growth would shrink the partition or select another entry")
+    if current["last"] == root["end"]:
+        return
+    size = current["last"] - root["start"] + 1
+    # growpart internally invokes sfdisk/partx kernel updates through new opens.
+    # Suppress those updates here, retain the claim, and preserve entry identity.
+    run("sfdisk", "--no-reread", "--no-tell-kernel", "--wipe", "never",
+        "--wipe-partitions", "never", "-N", "3", target,
+        input=f"start={root['start']}, size={size}\n")
+
+
+def install(args):
+    if sys.platform != "linux":
+        raise ValueError("This installer runs on Linux, normally from an SD recovery system")
+    image = Path(args.image).resolve(strict=True)
+    target = Path(args.target).resolve(strict=True)
+    required = ["lsblk", "sgdisk", "sfdisk", "blockdev"]
+    if args.grow_root:
+        required.extend(("e2fsck", "resize2fs"))
+    missing = [command for command in required if not shutil.which(command)]
+    if missing:
+        raise ValueError("Missing required tools: " + ", ".join(missing))
+    image_info = inspect_image(image)
+    checksum = expected_digest(image, args.sha256)
+    target_info = inspect_target(target, image_info["image_bytes"])
+    print(json.dumps({"image": image_info, "target": target_info, "expected_sha256": checksum,
+                      "grow_root": args.grow_root, "dry_run": args.dry_run}, indent=2), flush=True)
+    print("Checking image SHA256...", flush=True)
+    if digest_file(image) != checksum:
+        raise ValueError("Image SHA256 mismatch; no disk data was written")
+    if args.dry_run:
+        print("Dry-run passed. No target writes were performed.")
+        return
+    if os.geteuid() != 0:
+        raise ValueError("Actual installation requires root privileges")
+    if args.confirm is not None:
+        if args.confirm != str(target):
+            raise ValueError(f"--confirm must exactly match the resolved target {target}")
+    elif not sys.stdin.isatty() or input(f"ALL DATA ON {target} WILL BE ERASED. Type ERASE {target}: ") != f"ERASE {target}":
+        raise ValueError("Exact erase confirmation was not given; no disk data was written")
+    if inspect_target(target, image_info["image_bytes"]) != target_info:
+        raise ValueError("Target identity/state changed after preflight")
+    # Linux O_EXCL on block devices refuses mounted disks, swap and another claimant.
+    # Keep this claim through writing, read-back and partition-table changes.
+    # Release it before e2fsck, which obtains its own exclusive partition access.
+    import fcntl
+    descriptor = os.open(target, os.O_RDWR | os.O_EXCL | os.O_CLOEXEC)
+    with os.fdopen(descriptor, "r+b", buffering=0) as destination:
+        actual = os.fstat(destination.fileno())
+        if f"{os.major(actual.st_rdev)}:{os.minor(actual.st_rdev)}" != target_info["major_minor"]:
+            raise ValueError("Opened target identity differs from preflight")
+        if struct.unpack("I", fcntl.ioctl(destination.fileno(), 0x1268, bytes(4)))[0] != SECTOR_SIZE:
+            raise ValueError("Opened target logical sector size changed")
+        if struct.unpack("Q", fcntl.ioctl(destination.fileno(), 0x80081272, bytes(8)))[0] != target_info["bytes"]:
+            raise ValueError("Opened target capacity changed")
+        print(f"Writing {image_info['image_bytes']} bytes to {target}...", flush=True)
+        with image.open("rb") as source:
+            fcntl.flock(source.fileno(), fcntl.LOCK_SH | fcntl.LOCK_NB)
+            write_verified_image(source, destination, image_info["image_bytes"], checksum)
+        os.fsync(destination.fileno())
+        if destination.tell() != image_info["image_bytes"]:
+            raise RuntimeError("Written byte count differs from the reviewed image; installation is incomplete")
+        # Flush block cache before reading so verification reaches storage.
+        run("blockdev", "--flushbufs", target)
+        print("Reading back the entire written image for SHA256 verification...", flush=True)
+        verify_written(destination, image_info["image_bytes"], checksum)
+        # Relocation intentionally changes GPT bytes only after the full image matched.
+        # Keep partition mutation tools from issuing BLKRRPART through a new fd.
+        # sfdisk's relocation changes the same backup-GPT placement as sgdisk -e.
+        run("sfdisk", "--no-reread", "--no-tell-kernel", "--relocate", "gpt-bak-std", target)
+        run("sgdisk", "--verify", target)
+        if shutil.which("udevadm"):
+            run("udevadm", "settle")
+        reread_partition_table(destination)
+        if shutil.which("udevadm"):
+            run("udevadm", "settle")
+        if args.grow_root:
+            # Refuse newly mounted partitions before any filesystem resize.
+            inspect_target(target, image_info["image_bytes"])
+            grow_root_partition(destination, target, image_info["partitions"])
+            if shutil.which("udevadm"):
+                run("udevadm", "settle")
+            reread_partition_table(destination)
+            if shutil.which("udevadm"):
+                run("udevadm", "settle")
+            rootpart = Path(str(target) + ("p" if target.name[-1].isdigit() else "") + "3")
+            inspect_target(target, image_info["image_bytes"])
+            destination.close()
+            inspect_target(target, image_info["image_bytes"])
+            run("e2fsck", "-f", "-p", rootpart, ok=(0, 1))
+            inspect_target(target, image_info["image_bytes"])
+            run("resize2fs", rootpart)
+            inspect_target(target, image_info["image_bytes"])
+            run("e2fsck", "-f", "-n", rootpart)
+        run("sgdisk", "--verify", target)
+        with target.open("rb", buffering=0) as check:
+            final = gpt_header(check, SECTOR_SIZE, 1)
+            if final["backup"] != target_info["bytes"] // SECTOR_SIZE - 1:
+                raise RuntimeError("Backup GPT was not relocated to the actual end of UFS")
+            for original, updated in zip(image_info["partitions"], final["partitions"]):
+                if any(original[key] != updated[key] for key in ("number", "start", "uuid", "type", "attributes")):
+                    raise RuntimeError("Partition identity or start changed during GPT/size adjustment")
+                if original["number"] != 3 or not args.grow_root:
+                    if original["end"] != updated["end"]:
+                        raise RuntimeError("An unexpected partition boundary changed")
+            if len(final["partitions"]) != 3:
+                raise RuntimeError("Unexpected final partition count")
+            if args.grow_root and final["last"] - final["partitions"][2]["end"] > MIB // SECTOR_SIZE:
+                raise RuntimeError("Root partition did not grow to the available capacity")
+        if not destination.closed:
+            os.fsync(destination.fileno())
+    os.sync()
+    print("Installation verified. Shut down, remove the SD card, then boot from UFS.")
+    if not args.grow_root:
+        print("The root filesystem remains at image size; GPT backup has been moved to the UFS end.")
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--image", required=True, help="uncompressed 4096-byte-sector .img")
+    parser.add_argument("--target", required=True, help="whole UFS disk; never the current root disk")
+    parser.add_argument("--sha256", help="expected uncompressed image SHA256; defaults to image.img.sha256")
+    parser.add_argument("--dry-run", action="store_true", help="validate and print, perform no writes")
+    parser.add_argument("--grow-root", action="store_true", help="grow root partition/ext4 after verified writing")
+    parser.add_argument("--confirm", metavar="EXACT_TARGET", help="explicit reviewed noninteractive erase confirmation")
+    args = parser.parse_args()
+    try:
+        install(args)
+    except (OSError, RuntimeError, ValueError, KeyError) as exc:
+        parser.exit(1, f"UFS install refused/failed: {exc}\n")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,14 @@
+[Unit]
+Description=Initialize A7Z identity and optional SD/UFS configuration seeds
+After=local-fs.target
+Before=NetworkManager.service sshd.service
+RequiresMountsFor=/config
+ConditionPathExists=!/var/lib/a7z/firstboot-complete
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/a7z-firstboot
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

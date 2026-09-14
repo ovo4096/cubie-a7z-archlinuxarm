@@ -1,0 +1,5 @@
+# Independent from the Arch Generic kernel preset; do not inherit linux-aarch64.
+ALL_config="/etc/mkinitcpio-a7z.conf"
+ALL_kver="6.6.98-4-aw2511"
+PRESETS=('default')
+default_image="/boot/initramfs-6.6.98-4-aw2511.img"

@@ -1,0 +1,2 @@
+# Preserve exact build-input bytes and SOURCE-MANIFEST checksums on every host.
+* -text

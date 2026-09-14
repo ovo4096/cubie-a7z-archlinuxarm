@@ -1,0 +1,15 @@
+[Unit]
+Description=Initialize a device-local pacman keyring from packaged public keys
+After=local-fs.target systemd-random-seed.service
+Before=NetworkManager.service sshd.service a7z-firstboot.service display-manager.service multi-user.target
+Wants=systemd-random-seed.service
+RequiresMountsFor=/etc/pacman.d/gnupg /usr/share/pacman/keyrings
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/a7z-keyring-init
+RemainAfterExit=yes
+TimeoutStartSec=180
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,162 @@
+#!/usr/bin/python3
+"""Import optional local FAT seeds once, then remove successfully imported seeds."""
+import configparser
+import os
+from pathlib import Path
+import pwd
+import re
+import stat
+import subprocess
+import tempfile
+
+
+def safe_path(root, relative):
+    path = root / relative
+    cursor = path
+    while cursor != root:
+        if cursor.is_symlink():
+            raise ValueError('Seed/configuration symlinks are not accepted')
+        cursor = cursor.parent
+    return path
+
+
+def read_seed(path, limit):
+    descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+    with os.fdopen(descriptor, 'rb') as handle:
+        if not stat.S_ISREG(os.fstat(handle.fileno()).st_mode):
+            raise ValueError('Seed is not a regular file')
+        data = handle.read(limit + 1)
+        if len(data) > limit:
+            raise ValueError('Seed exceeds its size limit')
+        return data
+
+
+def wifi_valid(data):
+    try:
+        conf = configparser.ConfigParser(interpolation=None, strict=True)
+        conf.read_string(data.decode('utf-8'))
+        if (conf.get('connection', 'type') not in ('wifi', '802-11-wireless') or
+                not conf.get('connection', 'id').strip() or
+                not (conf.has_option('wifi', 'ssid') or conf.has_option('802-11-wireless', 'ssid'))):
+            raise ValueError()
+    except (configparser.Error, UnicodeError, ValueError):
+        raise ValueError('Invalid Wi-Fi seed; no seed contents are logged') from None
+
+
+def durable_write(path, data, owner=(0, 0), mode=0o600):
+    if path.exists():
+        if path.is_symlink() or not path.is_file() or path.read_bytes() != data:
+            raise ValueError('Existing configuration conflicts with a seed; retained both')
+        os.chmod(path, mode)
+        os.chown(path, *owner)
+        with path.open('rb') as handle:
+            os.fsync(handle.fileno())
+        return
+    descriptor, temporary = tempfile.mkstemp(prefix='.a7z-seed-', dir=path.parent)
+    temporary = Path(temporary)
+    try:
+        with os.fdopen(descriptor, 'wb') as handle:
+            os.fchmod(handle.fileno(), mode)
+            os.fchown(handle.fileno(), *owner)
+            handle.write(data)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.link(temporary, path)
+        directory = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(directory)
+        finally:
+            os.close(directory)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def initialize(root=Path('/'), account=None, keygen=None, set_hostname=None):
+    root = root.resolve()
+    marker = safe_path(root, 'var/lib/a7z/firstboot-complete')
+    if marker.exists():
+        return
+    seed = safe_path(root, 'config')
+    wifi = safe_path(root, 'config/wifi')
+    sources = sorted(wifi.glob('*.nmconnection'))
+    if len(sources) > 32:
+        raise ValueError('Too many Wi-Fi seeds')
+    jobs = []
+    for source in sources:
+        data = read_seed(source, 65536)
+        wifi_valid(data)
+        destination = safe_path(root, 'etc/NetworkManager/system-connections/a7z-seed-' + source.name)
+        jobs.append((source, destination, data, (0, 0)))
+    keys = safe_path(root, 'config/ssh-authorized-keys')
+    if keys.exists():
+        data = read_seed(keys, 1048576)
+        if not data.strip() or b'PRIVATE KEY' in data:
+            raise ValueError('SSH seed must contain public keys')
+        if account is None:
+            user = pwd.getpwnam('alarm')
+            account = (user.pw_uid, user.pw_gid, user.pw_dir)
+        destination = safe_path(root, account[2].lstrip('/') + '/.ssh/authorized_keys')
+        jobs.append((keys, destination, data, account[:2]))
+    hostname_seed = safe_path(root, 'config/hostname')
+    hostname = None
+    if hostname_seed.exists():
+        try:
+            hostname = read_seed(hostname_seed, 64).decode('ascii').strip()
+        except UnicodeError:
+            raise ValueError('Invalid hostname seed') from None
+        if not re.fullmatch(r'[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?', hostname):
+            raise ValueError('Invalid hostname seed')
+    for source, destination, data, owner in jobs:
+        if destination.exists() and (not destination.is_file() or destination.read_bytes() != data):
+            raise ValueError('Existing configuration conflicts with a seed; retained both')
+    for source, destination, data, owner in jobs:
+        destination.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        destination.parent.chmod(0o700)
+        os.chown(destination.parent, *owner)
+        durable_write(destination, data, owner)
+    if hostname is not None:
+        destination = safe_path(root, 'etc/hostname')
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        descriptor, temp = tempfile.mkstemp(prefix='.a7z-hostname-', dir=destination.parent)
+        with os.fdopen(descriptor, 'wb') as handle:
+            os.fchmod(handle.fileno(), 0o644)
+            handle.write((hostname + '\n').encode())
+            handle.flush()
+            os.fsync(handle.fileno())
+        Path(temp).replace(destination)
+        if set_hostname:
+            set_hostname(hostname)
+        elif root == Path('/'):
+            Path('/proc/sys/kernel/hostname').write_text(hostname + '\n')
+    if keygen:
+        keygen()
+    else:
+        subprocess.run(['/usr/bin/ssh-keygen', '-A'], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    for source, destination, data, owner in jobs:
+        source.unlink()
+    if hostname is not None:
+        hostname_seed.unlink()
+    if sources and wifi.is_dir() and not any(wifi.iterdir()):
+        wifi.rmdir()
+    if seed.is_dir():
+        descriptor = os.open(seed, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+    marker.parent.mkdir(parents=True, exist_ok=True)
+    durable_write(marker, b'Identity and optional local seeds initialized.\n')
+    print('A7Z first boot initialized; imported seeds removed from config. Change the initial login password.')
+
+
+def main():
+    if os.geteuid() != 0:
+        raise SystemExit('Run as root')
+    try:
+        initialize()
+    except Exception:
+        raise SystemExit('A7Z first boot failed; seed import remains incomplete. Check seed format, permissions and existing configuration.') from None
+
+
+if __name__ == '__main__':
+    main()
