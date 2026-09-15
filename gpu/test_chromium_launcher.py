@@ -98,6 +98,26 @@ class ChromiumLauncherTests(unittest.TestCase):
         self.assertEqual(LAUNCHER.flag_paths({"HOME": "/home/example", "XDG_CONFIG_HOME": "/tmp/custom"})[-1],
                          Path("/tmp/custom/chromium-flags.conf"))
 
+    def test_kde_fallback_and_input_method_environment_survives_both_modes(self):
+        # Plasma menu launches and Konsole may carry different Qt defaults.
+        # These do not authorize changing the desktop or its input method.
+        kde = {"XDG_CURRENT_DESKTOP": "KDE", "QT_QUICK_BACKEND": "software",
+               "LIBGL_ALWAYS_SOFTWARE": "1", "QSG_RHI_BACKEND": "vulkan",
+               "VK_DRIVER_FILES": LAUNCHER.ICD,
+               "GTK_IM_MODULE": "fcitx", "QT_IM_MODULE": "fcitx", "XMODIFIERS": "@im=fcitx"}
+        original = dict(kde)
+        command, child = LAUNCHER.launch_plan([], kde)
+        for key, value in kde.items():
+            self.assertEqual(child[key], value)
+        self.assertEqual(child["VK_ICD_FILENAMES"], LAUNCHER.ICD)
+        self.assertIn("--use-angle=vulkan", command)
+        self.assertFalse(any(key.startswith("LD_") for key in child))
+        command, child = LAUNCHER.launch_plan([], kde, software=True)
+        self.assertIn("--disable-gpu", command)
+        self.assertNotIn("VK_DRIVER_FILES", child)
+        self.assertEqual(child, {key: value for key, value in kde.items() if key != "VK_DRIVER_FILES"})
+        self.assertEqual(kde, original)
+
     @unittest.skipUnless(sys.platform.startswith("linux"), "Use the same Linux GLib as the Arch launcher")
     def test_glib_tokenization_without_shell_expansion_or_file_changes(self):
         parse = LAUNCHER.glib_parser()

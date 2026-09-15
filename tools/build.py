@@ -25,7 +25,7 @@ REPO = Path(__file__).resolve().parents[1]
 STAGES = ("fetch", "extract", "bootstrap", "packages", "install", "finalize", "sanitize", "images", "archive", "audit")
 UNSAFE = {"/", "/root", "/home", "/usr", "/etc", "/var", "/tmp", "/mnt", "/media", "/boot", "/dev", "/proc", "/sys"}
 AUDIT_DOCUMENTS = ("RELEASE.zh-CN.md", "RELEASE-HYGIENE.zh-CN.md", "WIFI-FIRSTBOOT.zh-CN.md",
-                   "KDE.zh-CN.md", "ROLLING-UPGRADE.zh-CN.md")
+                   "KDE.zh-CN.md", "ROLLING-UPGRADE.zh-CN.md", "INSTALL.zh-CN.md")
 
 
 def digest(path):
@@ -87,7 +87,7 @@ def file_records(paths, base=None):
 
 def recipe_files():
     selected = []
-    for directory in ("tools", "runtime", "gpu", "packages"):
+    for directory in ("tools", "runtime", "gpu", "vpu", "desktop", "packages"):
         for path in (REPO / directory).rglob("*"):
             if path.is_file() and not path.is_symlink() and "__pycache__" not in path.parts and "work" not in path.parts:
                 if path.suffix not in (".pyc", ".deb", ".zst", ".gz", ".xz"):
@@ -313,6 +313,8 @@ class Build:
         if self.args.variant == "cli":
             gpu_args.extend(("--components", "userspace"))
         script("package_gpu.py", *gpu_args)
+        if self.args.variant != "cli":
+            script("package_vpu.py", "--vendor-root", self.vendor, "--output", self.packages / "vpu")
         script("package_base.py", "--output", self.packages / "base", "--source-date-epoch", self.epoch)
         return [path for path in self.packages.rglob("*") if path.is_file()]
 
@@ -324,6 +326,11 @@ class Build:
                     *(self.packages / "gpu").glob("radxa-a7z-gpu-userspace-*.pkg.tar.zst")]
         if len(archives) < 7:
             raise ValueError("Expected five BSP packages, base, and private GPU userspace")
+        if self.args.variant != "cli":
+            vpu = list((self.packages / "vpu").glob("radxa-a7z-vpu-*.pkg.tar.zst"))
+            if len(vpu) != 1:
+                raise ValueError("Desktop image requires exactly one matching VPU package")
+            archives.extend(vpu)
         for archive in archives:
             copy_verified(archive, selected / archive.name)
         if {path.name for path in selected.glob("*.pkg.tar.zst")} != {path.name for path in archives}:
@@ -404,7 +411,7 @@ class Build:
             if process.wait() or checksum.hexdigest() != json.loads(Path(str(image) + ".json").read_text())["sha256"]:
                 raise ValueError(f"Compressed image integrity/content verification failed: {compressed}")
             artifacts.append(compressed)
-        for folder in ("bsp", "gpu", "base"):
+        for folder in ("bsp", "gpu", "base", "vpu"):
             for source in sorted((self.packages / folder).glob("*")):
                 if source.is_file():
                     destination = self.output / "packages" / source.name
@@ -511,7 +518,10 @@ def main():
                 raise ValueError("A7Z_IMAGE_PASSWORD must be nonempty and contain no newline or colon")
         if not args.plan:
             commands = ("findmnt", "tar", "chroot", "unshare", "mount", "umount", "losetup", "sfdisk", "blockdev",
-                        "rsync", "mkfs.fat", "mkfs.ext4", "e2fsck", "readelf", "patchelf", "bsdtar", "zstd")
+                        "rsync", "mkfs.fat", "mkfs.ext4", "e2fsck", "readelf", "patchelf", "bsdtar", "zstd",
+                        "make", "patch", "gcc", "g++", "modinfo")
+            compiler_prefix = "" if os.uname().machine.lower() in ("aarch64", "arm64") else "aarch64-linux-gnu-"
+            commands += tuple(compiler_prefix + name for name in ("gcc", "ld", "nm", "objcopy", "objdump"))
             missing = [command for command in commands if not shutil.which(command)]
             if missing:
                 raise ValueError("Missing Linux build tools: " + ", ".join(missing))

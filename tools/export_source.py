@@ -19,10 +19,10 @@ from urllib.parse import unquote, urlsplit
 REPO = Path(__file__).resolve().parents[1]
 ALLOWLIST = (
     ".gitignore", ".gitattributes", "LICENSE", "README.md", "RELEASE.zh-CN.md",
-    "WIFI-FIRSTBOOT.zh-CN.md", "KDE.zh-CN.md", "RELEASE-HYGIENE.zh-CN.md",
+    "WIFI-FIRSTBOOT.zh-CN.md", "KDE.zh-CN.md", "RELEASE-HYGIENE.zh-CN.md", "INSTALL.zh-CN.md",
     "ROLLING-UPGRADE.zh-CN.md", "THIRD-PARTY-LICENSES.zh-CN.md",
     "config/sources.lock.json",
-    "tools/build.py", "tools/export_build_audit.py", "tools/export_source.py",
+    "tools/build.py", "tools/build_gpu_kmod.py", "tools/desktop.py", "tools/export_build_audit.py", "tools/export_source.py",
     "tools/flash_sd.py", "tools/image.py", "tools/package_base.py", "tools/package_bsp.py",
     "tools/package_gpu.py", "tools/package_vpu.py", "tools/personalize.py", "tools/rootfs.py", "tools/sanitize.py", "tools/sources.py",
     "runtime/a7z-boot-update", "runtime/a7z-firstboot", "runtime/a7z-firstboot.service",
@@ -37,13 +37,18 @@ ALLOWLIST = (
     "gpu/test_capture_x11.py", "gpu/test_desktop_selector.py", "gpu/test_package_gpu.py",
     "gpu/a7z-chromium", "gpu/a7z-chromium.desktop", "gpu/CHROMIUM.zh-CN.md",
     "gpu/test_chromium_launcher.py", "gpu/XFCE-CHROMIUM-VALIDATION.zh-CN.md",
+    "gpu/kernel/README.md", "gpu/kernel/0001-use-generic-drm-fdinfo.patch",
     "vpu/a7z-vpu-run", "vpu/70-a7z-vpu.rules", "vpu/README.zh-CN.md",
     "vpu/CHROMIUM-INTEGRATION.zh-CN.md", "vpu/VALIDATION.zh-CN.md",
     "vpu/UPSTREAM-NOTICE.txt", "vpu/t5-sources.json", "vpu/test_package_vpu.py",
+    "desktop/x11-environment.sh", "desktop/rime-default.custom.yaml", "desktop/plasma-localerc",
+    "desktop/mimeapps.list", "desktop/fontconfig.conf", "desktop/fcitx5-profile",
+    "desktop/fcitx5-config", "desktop/README.zh-CN.md", "tests/test_desktop_defaults.py",
+    "desktop/xfce-a7z-chromium.desktop", "desktop/xfce-helpers.rc",
     "packages/base/LICENSE", "packages/tests/test_boot_update.py", "packages/tests/test_bsp_packager.py",
-    "tests/integration_image.py", "tests/integration_personalize.py", "tests/test_build_safety.py",
+    "tests/integration_image.py", "tests/integration_personalize.py", "tests/integration_grow_root.py", "tests/test_build_safety.py",
     "tests/test_flash_sd_safety.py", "tests/test_image_safety.py", "tests/test_personalize_safety.py",
-    "tests/test_rootfs_variants.py", "tests/test_sanitize.py", "tests/test_export_source.py",
+    "tests/test_rootfs_variants.py", "tests/test_sanitize.py", "tests/test_export_source.py", "tests/test_gpu_kmod_builder.py",
 )
 
 # Match actual values, not escaped pattern definitions. Findings expose only the

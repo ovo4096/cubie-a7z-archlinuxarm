@@ -1,0 +1,48 @@
+--- a/img-bxm/linux/rogue_km/services/server/env/linux/pvr_drm.c
++++ b/img-bxm/linux/rogue_km/services/server/env/linux/pvr_drm.c
+@@ -469,38 +469,18 @@
+ 
+ #if defined(SUPPORT_LINUX_FDINFO)
+ /*
+- * Produce the PVR specific fdinfo (utilization figures etc.) when queried.
+- *
+- * For kernels post 6.5 there is a helper function called 'drm_show_fdinfo'
+- * which will generate the mandatory keys (drm-driver, drm-pdev, drm-client-id)
+- * so we do not need to generate these if running on a later kernel etc.
+- *
++ * Keep fdinfo independent of the optional Services/Sync connection. Opening
++ * the DRM node in ON_CONNECT mode succeeds before PVR_SRVKM_INIT creates
++ * driver_priv. Diagnostic readers must not dereference that missing object.
++ *
++ * Expose the core DRM fields only; vendor connection statistics are omitted
++ * without changing rendering, ioctl handling or connection lifetimes.
+  */
+ static void pvr_show_fdinfo(struct seq_file *seq_file, struct file *file)
+ {
+-	struct drm_file *dfile = file->private_data;
+-	struct drm_device *dev = dfile->minor->dev;
+-	struct drm_printer p = drm_seq_file_printer(seq_file);
+-	PVRSRV_CONNECTION_PRIV *pvr_connection = dfile->driver_priv;
+-	struct pvr_drm_private *priv;
+-	int my_pid;
+-
+-	/* Grab the PID from the associated drm_file->pid->numbers[0].nr */
+-	my_pid = dfile->pid->numbers[0].nr;
+-
+-	priv = (struct pvr_drm_private *)dev->dev_private;
+-
+-	/* Generate driver-specific keys */
+-	PVRDKFTraverse((DKF_VPRINTF_FUNC*)drm_vprintf,
+-	               &p,
+-	               priv->dev_node,
+-	               my_pid,
+-	               pvr_connection->ui32Type);
+-
+-	/* Call into OS-specific drm_show_fdinfo if it is supported */
+ #if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 5, 0))
+ 	drm_show_fdinfo(seq_file, file);
+-#endif	/* LINUX_VERSION_CODE >= KERNEL_VERSION(6, 5, 0) */
++#endif
+ }
+ #endif /* SUPPORT_LINUX_FDINFO */
+ 

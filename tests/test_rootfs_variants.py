@@ -13,10 +13,21 @@ spec.loader.exec_module(rootfs)
 class VariantTests(unittest.TestCase):
     def test_cli_package_set_has_no_desktop_server_or_display_manager(self):
         packages = rootfs.variant_packages('cli')
-        for item in ('xorg-server', 'xfce4', 'lightdm', 'sddm', 'plasma-desktop', 'mesa-utils'):
+        for item in ('xorg-server', 'xfce4', 'lightdm', 'sddm', 'plasma-desktop', 'mesa-utils', 'chromium', 'fcitx5-rime'):
             self.assertNotIn(item, packages)
         for item in ('networkmanager', 'openssh', 'mkinitcpio', 'libdrm'):
             self.assertIn(item, packages)
+
+    def test_desktops_include_browser_input_and_audio_and_all_images_can_download_ufs(self):
+        for variant in ('cli', 'xfce', 'kde'):
+            packages = rootfs.variant_packages(variant)
+            for item in ('curl', 'wget', 'zstd', 'gptfdisk'):
+                self.assertIn(item, packages)
+            if variant != 'cli':
+                for item in ('chromium', 'fcitx5-rime', 'fcitx5-gtk', 'fcitx5-qt',
+                             'rime-luna-pinyin', 'pipewire-pulse', 'wireplumber', 'gst-plugins-bad'):
+                    self.assertIn(item, packages)
+            self.assertEqual(len(packages), len(set(packages)))
 
     def test_legacy_desktop_is_xfce_and_conflicting_variant_fails(self):
         self.assertEqual(rootfs.selected_variant(types.SimpleNamespace(desktop=True, variant=None)), 'xfce')
@@ -38,7 +49,15 @@ class VariantTests(unittest.TestCase):
             sessions = root / 'usr/share/xsessions'
             sessions.mkdir(parents=True)
             (sessions / 'plasmax11.desktop').write_text('[Desktop Entry]\nExec=/usr/bin/startplasma-x11\n')
+            personal = root / 'home/alarm/.config/powerdevilrc'
+            personal.parent.mkdir(parents=True)
+            personal.write_text('[AC][SuspendAndShutdown]\nAutoSuspendAction=1\n')
             rootfs.configure_kde(root)
+            power = (root / 'etc/xdg/powerdevilrc').read_text()
+            self.assertEqual(power, rootfs.CONFIG_MARKER + '[AC][SuspendAndShutdown]\nAutoSuspendAction=0\n')
+            self.assertNotIn('[$i]', power)  # The desktop GUI can override the system default.
+            self.assertEqual(personal.read_text(), '[AC][SuspendAndShutdown]\nAutoSuspendAction=1\n')
+            self.assertFalse((root / 'etc/systemd/sleep.conf.d').exists())
             self.assertIn('Enabled=false', (root / 'etc/xdg/kwinrc').read_text())
             self.assertIn('QT_QUICK_BACKEND=software', (root / 'etc/xdg/plasma-workspace/env/a7z-t5.sh').read_text())
             self.assertFalse((root / 'etc/environment').exists())
@@ -49,6 +68,24 @@ class VariantTests(unittest.TestCase):
             self.assertIn('Environment=VK_DRIVER_FILES=/usr/share/radxa-a7z-gpu/vulkan/powervr_icd.json', shell)
             self.assertNotIn('ExecStart=', shell)
             self.assertFalse((root / 'etc/systemd/user/plasma-kwin_x11.service.d').exists())
+
+    def test_cli_and_xfce_finalize_do_not_apply_kde_power_policy(self):
+        # Stop at the chroot boundary: this checks the actual variant dispatch
+        # without installing packages, executing services or resetting accounts.
+        class ReachedChroot(Exception):
+            pass
+        for variant in ('cli', 'xfce'):
+            with self.subTest(variant=variant), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                desktop_stub = types.SimpleNamespace(configure_desktop_defaults=lambda *args: None)
+                with patch.object(rootfs, 'validate_root', return_value=root), \
+                     patch.object(rootfs, 'verify_variant'), patch.object(rootfs, 'configure_kde') as configure, \
+                     patch.dict('sys.modules', {'desktop': desktop_stub}), \
+                     patch.object(rootfs, 'chroot_mounts', side_effect=ReachedChroot):
+                    with self.assertRaises(ReachedChroot):
+                        rootfs.finalize(types.SimpleNamespace(rootfs=root, variant=variant, desktop=False))
+                    configure.assert_not_called()
+                self.assertFalse((root / 'etc/xdg/powerdevilrc').exists())
 
     def test_known_legacy_lightdm_configuration_can_be_migrated_only_exactly(self):
         with tempfile.TemporaryDirectory() as directory:

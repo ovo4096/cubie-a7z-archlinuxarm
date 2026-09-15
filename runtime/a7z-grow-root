@@ -33,6 +33,8 @@ def read_table(disk):
 
 
 def gpt_bounds(disk, sector_size, disk_bytes):
+    if sector_size not in (512, 4096) or disk_bytes % sector_size:
+        raise ValueError("Invalid disk geometry for GPT")
     with disk.open("rb", buffering=0) as handle:
         handle.seek(sector_size)
         raw = handle.read(sector_size)
@@ -57,8 +59,24 @@ def gpt_bounds(disk, sector_size, disk_bytes):
         raise ValueError("GPT partition-table CRC mismatch; repair manually before resizing")
     sectors = disk_bytes // sector_size
     entries_sectors = (count * entry_size + sector_size - 1) // sector_size
-    return {"last_usable_lba": sectors - entries_sectors - 2,
-            "old_backup_lba": struct.unpack_from("<Q", raw, 32)[0],
+    primary_lba, backup_lba, first_usable, current_last = struct.unpack_from("<QQQQ", raw, 24)
+    physical_last = sectors - entries_sectors - 2
+    if (primary_lba != 1 or entries_lba < 2 or entries_lba + entries_sectors > first_usable
+            or not first_usable <= current_last <= physical_last
+            or not current_last + entries_sectors < backup_lba < sectors):
+        raise ValueError("Invalid GPT usable bounds or backup header location")
+    # The final physical sectors are not automatically usable. In particular,
+    # sgdisk -e can place the backup header at the device end while preserving
+    # a reserved gap around its entries. sfdisk correctly refuses a partition
+    # that extends beyond the header's declared last usable LBA.
+    # Before relocation this is a preview upper bound only; apply rereads the
+    # written GPT and uses its actual usable limit before changing a partition.
+    target_last = current_last if backup_lba == sectors - 1 else physical_last
+    return {"last_usable_lba": target_last,
+            "current_last_usable_lba": current_last,
+            "physical_last_usable_lba": physical_last,
+            "first_usable_lba": first_usable,
+            "old_backup_lba": backup_lba,
             "new_backup_lba": sectors - 1}
 
 
@@ -131,6 +149,9 @@ def plan_for_root(mountpoint="/", allow_test_loop=False):
     size = int(run("blockdev", "--getsize64", disk, capture=True))
     bounds = gpt_bounds(disk, sector, size)
     table = read_table(disk)
+    # Reject a root already outside the current GPT even when a larger device
+    # would make that otherwise look like a valid future expansion.
+    validate_layout(table, rootdev, size, sector, bounds["current_last_usable_lba"])
     root, new_size = validate_layout(table, rootdev, size, sector, bounds["last_usable_lba"])
     fs_uuid = run("blkid", "-s", "UUID", "-o", "value", rootdev, capture=True)
     if not fs_uuid:
@@ -169,6 +190,23 @@ def apply_plan(plan, backup_parent):
         raise RuntimeError("Disk geometry changed since preview; refusing to write")
     if plan["old_backup_lba"] != plan["new_backup_lba"]:
         run("sfdisk", "--no-reread", "--no-tell-kernel", "--relocate", "gpt-bak-std", disk)
+    # Relocation may retain GPT-reserved sectors. Read the actual primary
+    # header and table after it, verify that no partition identity changed,
+    # and never request more than the now-declared usable space.
+    bounds = gpt_bounds(disk, plan["sector_size"], plan["disk_bytes"])
+    if bounds["old_backup_lba"] != plan["new_backup_lba"]:
+        raise RuntimeError("Backup GPT was not relocated; partition expansion has not been attempted")
+    relocated = read_table(disk)
+    assert_preserved(plan["original_table"], relocated, str(rootdev), plan["old_size_sectors"])
+    if int(relocated.get("lastlba", -1)) != bounds["current_last_usable_lba"]:
+        raise RuntimeError("GPT header and partition tool disagree on the usable disk boundary")
+    root, new_size = validate_layout(relocated, rootdev, plan["disk_bytes"], plan["sector_size"],
+                                     bounds["current_last_usable_lba"])
+    if int(root["start"]) != plan["start_lba"] or new_size > plan["new_size_sectors"]:
+        raise RuntimeError("Relocated GPT would exceed the reviewed expansion bounds")
+    plan = {**plan, **bounds, "new_size_sectors": new_size,
+            "growth_bytes": (new_size - plan["old_size_sectors"]) * plan["sector_size"]}
+    (backup / "effective-plan.json").write_text(json.dumps(plan, indent=2) + "\n")
     if plan["growth_bytes"]:
         # -N updates only this entry; omitted identity/type/attributes are preserved.
         # Suppress automatic signature wiping and full-disk BLKRRPART on the mounted root disk.

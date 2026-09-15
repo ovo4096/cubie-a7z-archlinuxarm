@@ -8,7 +8,9 @@ import importlib.util
 from pathlib import Path
 from types import SimpleNamespace
 import tempfile
+import struct
 import unittest
+import zlib
 from unittest import mock
 
 REPO = Path(__file__).resolve().parents[1]
@@ -137,6 +139,60 @@ class GrowRootSafetyTests(unittest.TestCase):
             after["partitions"][2][key] = value
             with self.subTest(key=key), self.assertRaisesRegex(RuntimeError, "identity"):
                 grower.assert_preserved(self.table, after, str(self.root), 65536)
+
+    def gpt_fixture(self, directory, sector, backup_lba, last_usable):
+        path = Path(directory) / "gpt.img"
+        entries = bytes(128 * 128)
+        header = bytearray(sector)
+        header[:8] = b"EFI PART"
+        struct.pack_into("<III", header, 8, 0x10000, 92, 0)
+        struct.pack_into("<QQQQ", header, 24, 1, backup_lba, (1 << 20) // sector, last_usable)
+        struct.pack_into("<QIII", header, 72, 2, 128, 128, zlib.crc32(entries) & 0xffffffff)
+        struct.pack_into("<I", header, 16, zlib.crc32(header[:92]) & 0xffffffff)
+        with path.open("wb") as stream:
+            stream.truncate(4 << 30)
+            stream.seek(sector)
+            stream.write(header)
+            stream.seek(2 * sector)
+            stream.write(entries)
+        return path
+
+    def test_gpt_at_device_end_honors_reserved_tail_gap(self):
+        for sector in (512, 4096):
+            with self.subTest(sector=sector), tempfile.TemporaryDirectory() as directory:
+                backup = (4 << 30) // sector - 1
+                last = (4 << 30) // sector - (1 << 20) // sector
+                path = self.gpt_fixture(directory, sector, backup, last)
+                bounds = grower.gpt_bounds(path, sector, 4 << 30)
+                self.assertEqual(bounds["last_usable_lba"], last)
+                self.assertEqual(bounds["current_last_usable_lba"], last)
+                self.assertGreater(bounds["physical_last_usable_lba"], last)
+
+    def test_unrelocated_gpt_keeps_current_and_preview_bounds_separate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            backup = (1 << 30) // 4096 - 1
+            path = self.gpt_fixture(directory, 4096, backup, backup - 5)
+            bounds = grower.gpt_bounds(path, 4096, 4 << 30)
+            self.assertEqual(bounds["current_last_usable_lba"], backup - 5)
+            self.assertEqual(bounds["last_usable_lba"], (4 << 30) // 4096 - 6)
+            self.assertNotEqual(bounds["old_backup_lba"], bounds["new_backup_lba"])
+
+    def test_gpt_valid_crc_with_unsafe_bounds_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            backup = (4 << 30) // 4096 - 1
+            path = self.gpt_fixture(directory, 4096, backup, backup - 2)
+            with self.assertRaisesRegex(ValueError, "usable bounds"):
+                grower.gpt_bounds(path, 4096, 4 << 30)
+
+    def test_gpt_bad_crc_is_rejected_before_planning(self):
+        with tempfile.TemporaryDirectory() as directory:
+            backup = (4 << 30) // 4096 - 1
+            path = self.gpt_fixture(directory, 4096, backup, backup - 5)
+            with path.open("r+b") as stream:
+                stream.seek(4096 + 16)
+                stream.write(bytes(4))
+            with self.assertRaisesRegex(ValueError, "header CRC"):
+                grower.gpt_bounds(path, 4096, 4 << 30)
 
 
 class InstallerClaimTests(unittest.TestCase):

@@ -76,6 +76,6 @@ FAT 删除只取消文件引用，**不能保证闪存、文件系统空闲区�
 
 使用新建测试镜像验证了两种扇区的实际 FAT 注入、源镜像 SHA256 不变、config 外所有字节不变、私人标记、重复私有化拒绝和 profile 回读。首次启动导入、权限、失败重试及清理已在临时目录和两种扇区的实际 FAT loop 上验证；NetworkManager 的离线解析器接受生成的 Unicode SSID 配置。这组工具测试未写入实体开发板或公开源镜像。
 
-随后使用私人副本完成 CLI SD、XFCE SD 与 KDE UFS 的实体首次启动验证：自动连接 Wi-Fi，导入的连接配置归 root 所有且权限为 `0600`，成功后删除 config 中的 seed，并生成新的 SSH 主机身份和 pacman 本机密钥。公开源镜像保持清洁；具体镜像及桌面验证范围见 [发行说明](RELEASE.zh-CN.md)。
+此前在 CLI SD、XFCE SD 与 KDE UFS 验证镜像的私人副本上，实机确认了首次自动连接 Wi-Fi、连接配置为 root 所有且权限 `0600`、成功后删除 config seed，以及生成新的 SSH 主机身份和 pacman 本机密钥。公开源镜像保持清洁。这些历史记录说明首次联网流程的测试范围；本版各个镜像的实际首启结果见 [发行说明](RELEASE.zh-CN.md)。
 
 实现依据：[mtools 镜像操作说明](https://www.gnu.org/software/mtools/manual/mtools.html)、[NetworkManager keyfile 格式](https://networkmanager.pages.freedesktop.org/NetworkManager/NetworkManager/nm-settings-keyfile.html)。

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Repackage the locked Radxa T5 BSP without running Debian maintainer scripts.
+"""Package the locked T5 BSP with a source-built PowerVR fdinfo fix.
 
 Run on Linux against an extracted, unmodified T5 rootfs. See
-packages/BSP-RECIPE.md for the auditable binary-repackaging recipe.
+gpu/kernel/README.md for the module rebuild. Other BSP payloads remain vendor
+binaries with per-file provenance.
 """
 from __future__ import annotations
 
@@ -57,11 +58,19 @@ SPECS = {
         "depends": ["linux-radxa-a7z=6.6.98_4-1", "radxa-a7z-firmware", "kmod"], "licenses": ["GPL-2.0-only"],
     },
     "radxa-a7z-gpu-kmod": {
-        "version": "0.1.0_3-1", "description": "T5 PowerVR kernel module prebuilt for the A7Z kernel",
+        "version": "0.1.0_3-3", "description": "T5 PowerVR kernel module rebuilt with the DRM fdinfo fix for the A7Z kernel",
         "depends": ["linux-radxa-a7z=6.6.98_4-1", "radxa-a7z-firmware", "kmod"], "licenses": ["GPL-2.0-only", "MIT"],
     },
 }
 MODULE_RE = re.compile(r"\.ko(?:\.(?:gz|xz|zst))?$")
+GPU_FIX_PROVENANCE = "usr/share/radxa-a7z-gpu-kmod/fdinfo-fix-provenance.json"
+
+
+def build_fixed_module(vendor_root: Path, source_date_epoch: int, jobs: int = 2) -> tuple[bytes, dict]:
+    # Lazy import keeps unrelated metadata checks usable without invoking or
+    # loading the compiler. The CLI's script directory contains this helper.
+    from build_gpu_kmod import build_fixed_module as compile_module
+    return compile_module(vendor_root, source_date_epoch, jobs=jobs)
 
 
 def sha256(data: bytes) -> str:
@@ -193,6 +202,7 @@ class Builder:
         self.module_info: list[dict] = []
         self.warnings: list[str] = []
         self.exclusions: list[dict] = []
+        self.gpu_module_rebuild: dict | None = None
 
     def paths(self, package: str) -> list[str]:
         info = self.root / "var/lib/dpkg/info"
@@ -277,6 +287,72 @@ class Builder:
         self.add(package, name, deb)
         self.module_info.append({"path": arch_path(name), "package": package, "name": module_name, "vermagic": vermagic, "srcversion": metadata.get("srcversion", ""), "version": metadata.get("version", "")})
 
+    def replace_gpu_module(self) -> None:
+        """Replace only the selected pvrsrvkm payload; any failed gate aborts."""
+        package = "radxa-a7z-gpu-kmod"
+        identified = {record["path"] for record in self.module_info
+                      if record["package"] == package and record["name"] == "pvrsrvkm"}
+        candidates = [(path, entry) for path, entry in self.entries[package].items()
+                      if path in identified or PurePosixPath(path).name.startswith("pvrsrvkm.ko")]
+        if len(candidates) != 1:
+            raise ValueError("Expected exactly one original T5 pvrsrvkm module")
+        path, original = candidates[0]
+        if PurePosixPath(path).name != "pvrsrvkm.ko.xz" or original["type"] != "file":
+            raise ValueError("The locked pvrsrvkm payload must be a regular .ko.xz file")
+        source_payload = original["source"].read_bytes()
+        if sha256(source_payload) != original["sha256"]:
+            raise ValueError("Original pvrsrvkm payload changed after selection")
+        source_elf = lzma.decompress(source_payload)
+        source_info = elf_modinfo(source_elf)
+        if source_info.get("name") != "pvrsrvkm":
+            raise ValueError("Original T5 GPU module name is not pvrsrvkm")
+
+        # The compiler owns a temporary native workspace outside package output.
+        # There is deliberately no fallback to the vulnerable vendor binary.
+        fixed_elf, compiler_report = build_fixed_module(self.root, self.epoch, jobs=2)
+        if not isinstance(fixed_elf, bytes) or fixed_elf == source_elf:
+            raise ValueError("GPU module rebuild did not return a changed ELF payload")
+        fixed_info = elf_modinfo(fixed_elf)
+        for key in ("name", "version", "vermagic"):
+            if fixed_info.get(key, "") != source_info.get(key, ""):
+                raise ValueError(f"Rebuilt GPU module ABI mismatch ({key}): {fixed_info.get(key)!r}")
+        if fixed_info.get("vermagic", "").split(" ")[0] != KERNEL:
+            raise ValueError("Rebuilt GPU module does not target the locked kernel")
+        if (not isinstance(compiler_report, dict) or compiler_report.get("schema") != 1 or
+                compiler_report.get("fix") != "generic-drm-fdinfo" or
+                compiler_report.get("source_date_epoch") != self.epoch or
+                compiler_report.get("original_module_path") != path or
+                compiler_report.get("module_sha256") != sha256(fixed_elf) or
+                compiler_report.get("original_module_sha256") != original["sha256"] or
+                compiler_report.get("original_elf_sha256") != sha256(source_elf) or
+                compiler_report.get("vermagic") != fixed_info["vermagic"]):
+            raise ValueError("GPU compiler provenance does not match the selected and rebuilt payloads")
+        compiler_report = json.loads(json_bytes(compiler_report))
+        # Match T5 scripts/Makefile.modinst and its shipped module. The kernel
+        # XZ decoder rejects CRC64 with XZ_OPTIONS_ERROR even though host-side
+        # liblzma can decompress it successfully.
+        fixed_payload = lzma.compress(
+            fixed_elf, format=lzma.FORMAT_XZ, check=lzma.CHECK_CRC32,
+            filters=[{"id": lzma.FILTER_LZMA2, "dict_size": 1 << 20, "preset": 6}])
+        provenance = {"schema": 1, "installed_path": path,
+                      "source_path": original["source_path"], "source_package": original["source_package"],
+                      "source_sha256": original["sha256"], "source_elf_sha256": sha256(source_elf),
+                      "fixed_sha256": sha256(fixed_payload), "fixed_elf_sha256": sha256(fixed_elf),
+                      "source_modinfo": source_info, "fixed_modinfo": fixed_info,
+                      "compression": "xz, CRC32, LZMA2 dict=1MiB, preset 6", "build": compiler_report}
+        replacement = {key: value for key, value in original.items() if key != "source"}
+        replacement.update(data=fixed_payload, size=len(fixed_payload), sha256=sha256(fixed_payload),
+                           source_sha256=original["sha256"], source_elf_sha256=sha256(source_elf),
+                           fixed_sha256=sha256(fixed_payload), fixed_elf_sha256=sha256(fixed_elf),
+                           transformation="source-build-with-generic-drm-fdinfo")
+        self.generated(package, GPU_FIX_PROVENANCE, data=json_bytes(provenance))
+        self.entries[package][path] = replacement
+        self.gpu_module_rebuild = provenance
+        for record in self.module_info:
+            if record["package"] == package and record["path"] == path:
+                record.update(source_srcversion=record["srcversion"],
+                              srcversion=fixed_info.get("srcversion", ""), rebuilt=True)
+
     def select(self) -> None:
         linux_deb = f"linux-image-{KERNEL}"
         for name in self.paths(linux_deb):
@@ -339,6 +415,8 @@ class Builder:
             if f"usr/lib/firmware/{firmware}" not in self.entries["radxa-a7z-firmware"]:
                 raise ValueError(f"Matching PowerVR firmware missing: {firmware}")
 
+        self.replace_gpu_module()
+
         for package in SPECS:
             for deb in sorted(self.sources[package].copy()):
                 copyright_path = f"usr/share/doc/{deb}/copyright"
@@ -356,7 +434,9 @@ class Builder:
                 owners[path] = package
 
     def provenance(self, package: str) -> dict:
-        return {
+        if package == "radxa-a7z-gpu-kmod" and self.gpu_module_rebuild is None:
+            raise ValueError("GPU module cannot be packaged without the validated fdinfo rebuild")
+        result = {
             "schema": 1, "package": package, "version": SPECS[package]["version"], "kernel_release": KERNEL,
             "vendor_release": RELEASE_URL, "source_date_epoch": self.epoch,
             "method": "binary-repackage; no Debian maintainer scripts executed; no storage flashed",
@@ -365,6 +445,10 @@ class Builder:
             "modules": [item for item in self.module_info if item["package"] == package],
             "files": {name: self.public_entry(entry) for name, entry in sorted(self.entries[package].items())},
         }
+        if package == "radxa-a7z-gpu-kmod":
+            result["method"] = "vendor BSP plus source-built PowerVR DRM fdinfo fix; no Debian maintainer scripts executed; no storage flashed"
+            result["module_rebuild"] = self.gpu_module_rebuild
+        return result
 
     def pkginfo(self, package: str, size: int) -> bytes:
         spec = SPECS[package]
@@ -459,7 +543,7 @@ def main() -> int:
         parser.error("--output must be outside --vendor-root to keep the input read only")
     try:
         result = Builder(vendor, output, args.source_date_epoch).run()
-    except (ValueError, OSError, subprocess.CalledProcessError) as error:
+    except (ValueError, RuntimeError, OSError, subprocess.CalledProcessError) as error:
         print(f"BSP packaging failed: {error}", file=sys.stderr)
         return 1
     print(json.dumps({"packages": len(result["packages"]), "manifest": str(output / "bsp-manifest.json"), "warnings": result["warnings"]}, ensure_ascii=False))

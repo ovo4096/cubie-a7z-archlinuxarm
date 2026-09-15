@@ -13,18 +13,21 @@ import subprocess
 import tarfile
 import tempfile
 import unittest
+from unittest import mock
 
 SPEC = importlib.util.spec_from_file_location("package_bsp", Path(__file__).resolve().parents[2] / "tools/package_bsp.py")
 bsp = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(bsp)
 
 
-def module(name, release=bsp.KERNEL):
+def module(name, release=bsp.KERNEL, version=None, srcversion="FIXTURE", flags="SMP mod_unload aarch64"):
     header = bytearray(64)
     header[:6] = b"\x7fELF\x02\x01"
     header[18:20] = (183).to_bytes(2, "little")
     strings = b"\0.shstrtab\0.modinfo\0"
-    metadata = f"vermagic={release} SMP mod_unload aarch64\0name={name}\0srcversion=FIXTURE\0".encode()
+    metadata = f"vermagic={release} {flags}\0name={name}\0srcversion={srcversion}\0".encode()
+    if version is not None:
+        metadata += f"version={version}\0".encode()
     body = strings + metadata
     sections = bytearray(64 * 3)
     struct.pack_into("<Q", header, 40, 64 + len(body))
@@ -61,7 +64,9 @@ def make_fixture(root):
     add(kernel_deb, f"lib/modules/{bsp.KERNEL}/kernel/test.ko.xz", lzma.compress(module("test")))
     add(kernel_deb, f"lib/modules/{bsp.KERNEL}/modules.builtin", b"builtin\n")
     add("aic8800-usb-dkms", f"lib/modules/{bsp.KERNEL}/updates/dkms/aic8800_fdrv_usb.ko.xz", lzma.compress(module("aic8800_fdrv")))
-    add("img-bxm-dkms", f"lib/modules/{bsp.KERNEL}/updates/dkms/pvrsrvkm.ko.xz", lzma.compress(module("pvrsrvkm")))
+    add("img-bxm-dkms", f"lib/modules/{bsp.KERNEL}/updates/dkms/pvrsrvkm.ko.xz",
+        lzma.compress(module("pvrsrvkm"), format=lzma.FORMAT_XZ, check=lzma.CHECK_CRC32,
+                      filters=[{"id": lzma.FILTER_LZMA2, "dict_size": 1 << 20, "preset": 6}]))
     add("radxa-overlays-dkms", f"lib/modules/{bsp.KERNEL}/updates/dkms/radxa-overlays.ko.xz", lzma.compress(module("radxa_overlays")))
     add("radxa-overlays-dkms", "boot/dtbo/test.dtbo.disabled")
     add("u-boot-dlan17", "usr/lib/u-boot/radxa-cubie-a7s/u-boot-sunxi-with-spl.bin")
@@ -86,12 +91,29 @@ class BspPackageTests(unittest.TestCase):
         self.base = Path(self.tmp.name)
         self.root = self.base / "vendor"
         make_fixture(self.root)
+        self.gpu_path = f"usr/lib/modules/{bsp.KERNEL}/updates/dkms/pvrsrvkm.ko.xz"
+        self.fixed_elf = module("pvrsrvkm", srcversion="FIXTURE-FIXED")
+        self.compiler_patch = mock.patch.object(bsp, "build_fixed_module", side_effect=self.compiler_result)
+        self.compiler = self.compiler_patch.start()
+        self.addCleanup(self.compiler_patch.stop)
 
     def tearDown(self):
         self.tmp.cleanup()
 
     def builder(self, output="output"):
         return bsp.Builder(self.root, self.base / output, 1700000000)
+
+    def compiler_result(self, vendor_root, source_date_epoch, jobs=2):
+        self.assertEqual((vendor_root, source_date_epoch, jobs), (self.root, 1700000000, 2))
+        original = (self.root / self.gpu_path).read_bytes()
+        return self.fixed_elf, {"schema": 1, "fix": "generic-drm-fdinfo",
+                                "source_date_epoch": source_date_epoch, "original_module_path": self.gpu_path,
+                                "module_sha256": bsp.sha256(self.fixed_elf),
+                                "original_module_sha256": bsp.sha256(original),
+                                "original_elf_sha256": bsp.sha256(lzma.decompress(original)),
+                                "vermagic": bsp.elf_modinfo(self.fixed_elf)["vermagic"],
+                                "patch": {"path": "gpu/kernel/0001-use-generic-drm-fdinfo.patch",
+                                          "sha256": "0" * 64}}
 
     def test_rootfs_absolute_symlinks_and_usrmerge(self):
         link = self.root / "usr/lib/firmware/link.bin"
@@ -124,6 +146,107 @@ class BspPackageTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "not a raw ARM64 Image"):
             self.builder().select()
 
+    def test_gpu_payload_is_replaced_and_provenance_binds_both_binaries(self):
+        original = (self.root / self.gpu_path).read_bytes()
+        builder = self.builder()
+        builder.select()
+        self.compiler.assert_called_once_with(self.root, 1700000000, jobs=2)
+        entry = builder.entries["radxa-a7z-gpu-kmod"][self.gpu_path]
+        self.assertNotIn("source", entry)
+        self.assertEqual(lzma.decompress(entry["data"]), self.fixed_elf)
+        self.assertNotEqual(entry["data"], original)
+        self.assertEqual((self.root / self.gpu_path).read_bytes(), original)
+        self.assertEqual(entry["source_sha256"], bsp.sha256(original))
+        self.assertEqual(entry["sha256"], entry["fixed_sha256"])
+        self.assertEqual(entry["fixed_elf_sha256"], bsp.sha256(self.fixed_elf))
+        provenance = builder.provenance("radxa-a7z-gpu-kmod")
+        installed = json.loads(builder.entries["radxa-a7z-gpu-kmod"][bsp.GPU_FIX_PROVENANCE]["data"])
+        self.assertEqual(provenance["module_rebuild"], installed)
+        self.assertEqual(installed["source_elf_sha256"], bsp.sha256(lzma.decompress(original)))
+        self.assertEqual(installed["fixed_sha256"], bsp.sha256(entry["data"]))
+        self.assertEqual(provenance["modules"][0]["srcversion"], "FIXTURE-FIXED")
+        self.assertTrue(provenance["modules"][0]["rebuilt"])
+        self.assertEqual(bsp.SPECS["radxa-a7z-gpu-kmod"]["version"], "0.1.0_3-3")
+        self.assertFalse(builder.output.exists(), "No compiler workspace should be left in package output")
+
+    @unittest.skipUnless(shutil.which("xz"), "xz required for independent stream/filter inspection")
+    def test_gpu_xz_matches_t5_crc32_and_one_mib_dictionary(self):
+        builder = self.builder()
+        builder.select()
+        payload = builder.entries["radxa-a7z-gpu-kmod"][self.gpu_path]["data"]
+        decoder = lzma.LZMADecompressor(memlimit=2 << 20)
+        self.assertEqual(decoder.decompress(payload), self.fixed_elf)
+        self.assertTrue(decoder.eof)
+        self.assertEqual(decoder.unused_data, b"")
+        self.assertEqual(decoder.check, lzma.CHECK_CRC32)
+        self.assertEqual(builder.gpu_module_rebuild["compression"],
+                         "xz, CRC32, LZMA2 dict=1MiB, preset 6")
+
+        # xz independently inspects the on-disk filter properties, including
+        # the dictionary size, for both the vendor fixture and actual result.
+        rebuilt = self.base / "rebuilt.ko.xz"
+        rebuilt.write_bytes(payload)
+        for path in (self.root / self.gpu_path, rebuilt):
+            with self.subTest(path=path.name):
+                rows = [line.split("\t") for line in subprocess.check_output(
+                    ["xz", "--robot", "--list", "--verbose", "--verbose", str(path)],
+                    text=True).splitlines()]
+                file_row = next(row for row in rows if row[0] == "file")
+                self.assertEqual(file_row[1:3], ["1", "1"])
+                self.assertEqual(file_row[6], "CRC32")
+                self.assertEqual([row[-1] for row in rows if row[0] == "block"],
+                                 ["--lzma2=dict=1MiB"])
+
+        # A host round-trip alone accepted the broken CRC64/8MiB format.
+        # Keep that counterexample so this check cannot regress to round-trip
+        # validation without testing the kernel-compatible stream parameters.
+        incompatible = lzma.compress(self.fixed_elf, check=lzma.CHECK_CRC64, preset=6)
+        self.assertEqual(lzma.decompress(incompatible), self.fixed_elf)
+        old_decoder = lzma.LZMADecompressor()
+        old_decoder.decompress(incompatible)
+        self.assertEqual(old_decoder.check, lzma.CHECK_CRC64)
+        with self.assertRaises(lzma.LZMAError):
+            lzma.decompress(incompatible, memlimit=2 << 20)
+
+    def test_rebuilt_gpu_wrong_name_version_and_vermagic_rejected(self):
+        for fixed in (module("not_pvrsrvkm"), module("pvrsrvkm", version="different"),
+                      module("pvrsrvkm", release="6.6.99-4-aw2511"),
+                      module("pvrsrvkm", flags="SMP mod_unload modversions aarch64")):
+            with self.subTest(modinfo=bsp.elf_modinfo(fixed)):
+                self.fixed_elf = fixed
+                with self.assertRaisesRegex(ValueError, "ABI mismatch"):
+                    self.builder().select()
+                self.assertFalse(self.builder().output.exists())
+
+    def test_multiple_pvrsrvkm_entries_are_not_packaged(self):
+        duplicate = (self.root / self.gpu_path).with_name("pvr_duplicate.ko.xz")
+        duplicate.write_bytes(lzma.compress(module("pvrsrvkm")))
+        with self.assertRaisesRegex(ValueError, "exactly one"):
+            self.builder().select()
+        self.compiler.assert_not_called()
+
+    def test_gpu_compiler_failure_noop_or_unbound_provenance_never_falls_back(self):
+        builder = self.builder()
+        self.compiler.side_effect = RuntimeError("fixture compiler failed")
+        with self.assertRaisesRegex(RuntimeError, "compiler failed"):
+            builder.run()
+        self.assertFalse(builder.output.exists())
+        with self.assertRaisesRegex(ValueError, "without the validated"):
+            builder.archive("radxa-a7z-gpu-kmod")
+        self.compiler.side_effect = self.compiler_result
+        self.fixed_elf = module("pvrsrvkm")
+        with self.assertRaisesRegex(ValueError, "changed ELF"):
+            self.builder().select()
+        self.fixed_elf = module("pvrsrvkm", srcversion="FIXTURE-FIXED")
+        fixed, report = self.compiler_result(self.root, 1700000000)
+        for key in ("module_sha256", "original_module_sha256", "original_elf_sha256", "vermagic", "fix",
+                    "source_date_epoch", "original_module_path"):
+            with self.subTest(key=key):
+                self.compiler.side_effect = None
+                self.compiler.return_value = fixed, {**report, key: "incorrect"}
+                with self.assertRaisesRegex(ValueError, "provenance"):
+                    self.builder().select()
+
     def test_split_archives_metadata_and_reproducibility(self):
         with contextlib.redirect_stdout(io.StringIO()):
             first = self.builder("first").run()
@@ -151,6 +274,15 @@ class BspPackageTests(unittest.TestCase):
                 if package["name"] == "radxa-a7z-bootloader":
                     self.assertEqual(archive.getmember("usr/lib/u-boot/radxa-a733").linkname, "radxa-cubie-a7s")
                     self.assertEqual(archive.getmember("usr/lib/u-boot/radxa-cubie-a7s/setup.sh").mode, 0o755)
+                if package["name"] == "radxa-a7z-gpu-kmod":
+                    self.assertIn("pkgver = 0.1.0_3-3", info)
+                    payload = archive.extractfile(self.gpu_path).read()
+                    self.assertEqual(lzma.decompress(payload), self.fixed_elf)
+                    self.assertEqual(payload[7], lzma.CHECK_CRC32)
+                    fixed_report = json.loads(archive.extractfile(bsp.GPU_FIX_PROVENANCE).read())
+                    package_report = json.loads(archive.extractfile("usr/share/doc/radxa-a7z-gpu-kmod/bsp-provenance.json").read())
+                    self.assertEqual(fixed_report["fixed_sha256"], bsp.sha256(payload))
+                    self.assertEqual(package_report["module_rebuild"], fixed_report)
         self.assertEqual(owners[f"usr/lib/modules/{bsp.KERNEL}/updates/dkms/pvrsrvkm.ko.xz"], "radxa-a7z-gpu-kmod")
         self.assertEqual(owners[f"usr/lib/modules/{bsp.KERNEL}/updates/dkms/aic8800_fdrv_usb.ko.xz"], "radxa-a7z-wireless")
         self.assertNotIn("usr/lib/firmware/board.bin", owners)

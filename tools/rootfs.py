@@ -18,12 +18,17 @@ BASE_PACKAGES = [
     "python", "libdrm", "libx11", "libxcb", "libxshmfence", "vulkan-icd-loader",
     "vulkan-tools",
     "gptfdisk", "cloud-guest-utils",
+    "curl", "wget", "zstd",
 ]
 GUI_PACKAGES = ["xorg-server", "xf86-input-libinput", "mesa", "mesa-utils", "libglvnd",
-                "ttf-dejavu", "noto-fonts-cjk", "noto-fonts-emoji"]
+                "ttf-dejavu", "noto-fonts-cjk", "noto-fonts-emoji", "chromium",
+                "fcitx5", "fcitx5-rime", "fcitx5-gtk", "fcitx5-qt", "fcitx5-configtool", "rime-luna-pinyin",
+                "gstreamer", "gst-plugins-base", "gst-plugins-good", "gst-plugins-bad",
+                "pipewire-pulse", "pipewire-alsa", "wireplumber"]
 VARIANT_PACKAGES = {
     "cli": [],
-    "xfce": GUI_PACKAGES + ["xfce4", "lightdm", "lightdm-gtk-greeter", "network-manager-applet"],
+    "xfce": GUI_PACKAGES + ["xfce4", "lightdm", "lightdm-gtk-greeter", "network-manager-applet",
+                            "pavucontrol", "xfce4-pulseaudio-plugin", "xdg-desktop-portal-gtk", "mousepad"],
     "kde": GUI_PACKAGES + ["plasma-desktop", "plasma-x11-session", "sddm", "plasma-nm",
                            "plasma-pa", "kscreen", "dolphin", "konsole", "kate", "ark",
                            "pipewire-pulse", "wireplumber", "xdg-desktop-portal-kde"],
@@ -89,6 +94,11 @@ def configure_kde(root):
     sessions = list((root / "usr/share/xsessions").glob("*.desktop"))
     if not any("startplasma-x11" in path.read_text() for path in sessions):
         raise ValueError("Official Plasma X11 session missing; this T5 profile cannot silently switch to Wayland")
+    # An AC-powered development board should stay reachable while idle.
+    # This is a user-overridable PowerDevil default, not a system sleep ban;
+    # leave display blanking, locking and explicit sleep actions unchanged.
+    managed_configuration(root, "etc/xdg/powerdevilrc",
+                          "[AC][SuspendAndShutdown]\nAutoSuspendAction=0\n")
     # KWin's T5 EGL window-surface path crashes; keep its compositor disabled.
     # The session default also provides a rollback when the Vulkan overrides
     # below are disabled. No private EGL/GBM search path enters the session.
@@ -239,7 +249,12 @@ def finalize(args):
     verify_variant(root, variant)
     if variant == "kde":
         configure_kde(root)
+    if variant != "cli":
+        from desktop import configure_desktop_defaults
+        configure_desktop_defaults(root, variant)
     with chroot_mounts(root):
+        if variant != "cli":
+            chroot(root, ["/usr/bin/locale-gen"])
         chroot(root, ["/usr/bin/systemctl", "enable", "sshd", "NetworkManager", "systemd-resolved",
                       "systemd-timesyncd", "serial-getty@ttyAS0.service", "a7z-firstboot.service",
                       "a7z-grow-root.service"])

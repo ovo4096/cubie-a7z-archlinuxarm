@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "project": "cubie-a7z-archlinuxarm",
-  "created_utc": "2026-09-14T23:01:04.800906+00:00",
+  "created_utc": "2026-09-15T06:38:58.622500+00:00",
   "scope": "Explicitly allowlisted project source, tests, docs and upstream source lock. No images, packages, private diagnostics, backups or repository history.",
   "audit": {
     "result": "PASS",
@@ -30,9 +30,15 @@
       "mode": "0644"
     },
     {
+      "path": "INSTALL.zh-CN.md",
+      "bytes": 11041,
+      "sha256": "054e87e9262f4dfb15a2a0c6694d08cc51d8763c1375f2dadda9ff2c712ee469",
+      "mode": "0644"
+    },
+    {
       "path": "KDE.zh-CN.md",
-      "bytes": 9322,
-      "sha256": "c5300dd5d0548250fbc1d43d5417ff5f31b5b59f6af2fab5951f69e6956ce2d3",
+      "bytes": 14143,
+      "sha256": "7897eb00ebeb6e083ce0e0816e8401d4012e5922e25687ceffa592498f60b150",
       "mode": "0644"
     },
     {
@@ -43,8 +49,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 9376,
-      "sha256": "18b7b9f8cbb05d48b1d82a8eea8099fc491e1ba5b4c75b46f75f45fd551ecc23",
+      "bytes": 10700,
+      "sha256": "756f0084828ce4bf8577dd5ab81ad87d0965efb82195031f829cd2477c3a5f5b",
       "mode": "0644"
     },
     {
@@ -55,14 +61,14 @@
     },
     {
       "path": "RELEASE.zh-CN.md",
-      "bytes": 6404,
-      "sha256": "f7919d0f04108530069a442617e85e64cc4ee9ddaa8f862b4fa2a981f6657811",
+      "bytes": 19253,
+      "sha256": "8ea704a1f63a33a36a8eff86b76d329f3804d7ef5810fbdcf34bf4788df75cb4",
       "mode": "0644"
     },
     {
       "path": "ROLLING-UPGRADE.zh-CN.md",
-      "bytes": 5423,
-      "sha256": "3def59e6140e63211c5ae86da2dd009801d81473cfd534176955a174305bb220",
+      "bytes": 12632,
+      "sha256": "5150bd313577dd6bfb50337b8bfcc0f361497298605e72e0812dbbbe326c320c",
       "mode": "0644"
     },
     {
@@ -73,14 +79,74 @@
     },
     {
       "path": "WIFI-FIRSTBOOT.zh-CN.md",
-      "bytes": 7098,
-      "sha256": "847b07f695f7629691f0baec45d032a16e4df4895814d21c134d80a7f9bdb344",
+      "bytes": 7151,
+      "sha256": "c3b5a92606ef11259d63837cf630e62ed41e2b47722b63233c12dc75af1d317a",
       "mode": "0644"
     },
     {
       "path": "config/sources.lock.json",
       "bytes": 2645,
       "sha256": "10d9dbf6b6dc3274429c01f9ac44c20399218bd64f680887db1ae2208e7bd371",
+      "mode": "0644"
+    },
+    {
+      "path": "desktop/README.zh-CN.md",
+      "bytes": 3904,
+      "sha256": "b986d892f9e416f5812ab7f2a5e6c73c260bad24e3a14371ea2fd90bfdf58fc4",
+      "mode": "0644"
+    },
+    {
+      "path": "desktop/fcitx5-config",
+      "bytes": 71,
+      "sha256": "ba851b6bc745f42f25816cd5bd3dc1d38e453b0d07938fb4466f69fc04f923ef",
+      "mode": "0644"
+    },
+    {
+      "path": "desktop/fcitx5-profile",
+      "bytes": 164,
+      "sha256": "1d3142c4831de8c2b2a5f9dddfab11f4ec21409f0975f60c8b4e8bd86602c3c0",
+      "mode": "0644"
+    },
+    {
+      "path": "desktop/fontconfig.conf",
+      "bytes": 616,
+      "sha256": "3b74be5827253e09e0f54cf339db9507f54cff9aa2df67971f7f3f62542c2c16",
+      "mode": "0644"
+    },
+    {
+      "path": "desktop/mimeapps.list",
+      "bytes": 375,
+      "sha256": "fe914e73dfb10b7a8bf327c676eb7f31d070269311cf9b40cdf6893fac5e5f44",
+      "mode": "0644"
+    },
+    {
+      "path": "desktop/plasma-localerc",
+      "bytes": 64,
+      "sha256": "f7c939b6b520653699e2d8227a96ed320055921d9be36f3bd4ccd6ae27a1e523",
+      "mode": "0644"
+    },
+    {
+      "path": "desktop/rime-default.custom.yaml",
+      "bytes": 128,
+      "sha256": "35c90ff0ac1282ccb3ed6320109227c3958e794e1592a548166e9b2ec9914964",
+      "mode": "0644"
+    },
+    {
+      "path": "desktop/x11-environment.sh",
+      "bytes": 381,
+      "sha256": "83c0ec1b082dd54120b87d9aa39871526871b1fbe1d04b376563803d9dc73972",
+      "mode": "0644"
+    },
+    {
+      "path": "desktop/xfce-a7z-chromium.desktop",
+      "bytes": 258,
+      "sha256": "ddaf946ee543fb2e4ee9ac48b354ad5a3beb9f37a29dc65494e41f841bcbcbbb",
+      "mode": "0644"
+    },
+    {
+      "path": "desktop/xfce-helpers.rc",
+      "bytes": 24,
+      "sha256": "9d018a9c9c0c9233ec4d0f74a9c7a7bd404f22138735de4034a98424b6d0a2c5",
       "mode": "0644"
     },
     {
@@ -162,6 +228,18 @@
       "mode": "0755"
     },
     {
+      "path": "gpu/kernel/0001-use-generic-drm-fdinfo.patch",
+      "bytes": 1877,
+      "sha256": "a15d8f2fc39acc81f7556c509e535e3fd6df8127e79ca770bba32fb003aec839",
+      "mode": "0644"
+    },
+    {
+      "path": "gpu/kernel/README.md",
+      "bytes": 2867,
+      "sha256": "d4b8f118a04c16357184e631ae6981bc02f930cc37821a112e9efea3ce9b4ace",
+      "mode": "0644"
+    },
+    {
       "path": "gpu/test_capture_x11.py",
       "bytes": 4182,
       "sha256": "2d4d3bf5a42454b7228ea31273a87bd43e2fa055443037793df3473b0d6383b7",
@@ -169,8 +247,8 @@
     },
     {
       "path": "gpu/test_chromium_launcher.py",
-      "bytes": 7027,
-      "sha256": "e582a6f0a140a65c0867f8879db09a8555a2879685873ee78247ca2fae5e9386",
+      "bytes": 8226,
+      "sha256": "31145909ddb607c69895b23ba26e17f2ffef67bd1eb3f9d5c2bf7583482b01b0",
       "mode": "0644"
     },
     {
@@ -211,8 +289,8 @@
     },
     {
       "path": "packages/tests/test_bsp_packager.py",
-      "bytes": 8298,
-      "sha256": "bea6b4ea18d6a1e13f6d4bc0afa957f50237a7cd97518e8a933ed403ccc0aeb7",
+      "bytes": 16631,
+      "sha256": "aa3618af35b764850e9ea4706b78a221022f73cc6a16faa4a1552a69f2ce4d28",
       "mode": "0644"
     },
     {
@@ -235,8 +313,8 @@
     },
     {
       "path": "runtime/a7z-grow-root",
-      "bytes": 12020,
-      "sha256": "e429641c9258e62d7c571d4327d9f747253cecfe9af98fe90ad9c5b65977ac48",
+      "bytes": 14809,
+      "sha256": "c8fce72d089e7b68cdc27cd9683b98780ef39e2dd9c518bc16247a62301b6efc",
       "mode": "0755"
     },
     {
@@ -300,6 +378,12 @@
       "mode": "0644"
     },
     {
+      "path": "tests/integration_grow_root.py",
+      "bytes": 5797,
+      "sha256": "a09c709d0182795629b82362f9ec54c4544f5b2d8d31c84684930de05a7f1dd5",
+      "mode": "0755"
+    },
+    {
       "path": "tests/integration_image.py",
       "bytes": 9031,
       "sha256": "96dc922b3c8bb5a15fe5313a99f190ccd9845b75fa2bb971e8ac9e4d59c0f3b1",
@@ -318,6 +402,12 @@
       "mode": "0644"
     },
     {
+      "path": "tests/test_desktop_defaults.py",
+      "bytes": 7356,
+      "sha256": "f7333a48f6c5fa0fa017d12ec26674f07ed80fa276924f00546cada4a7f8c087",
+      "mode": "0644"
+    },
+    {
       "path": "tests/test_export_source.py",
       "bytes": 3537,
       "sha256": "b2dfd9e84b89a7a5cf69c1636003a26c36007d75cfacf6c2a02adb93953506ba",
@@ -330,9 +420,15 @@
       "mode": "0644"
     },
     {
+      "path": "tests/test_gpu_kmod_builder.py",
+      "bytes": 4002,
+      "sha256": "e3233912d9826759f8a3c9e38c432c9f444b23d31a187753ca76b5d49b6f2c93",
+      "mode": "0644"
+    },
+    {
       "path": "tests/test_image_safety.py",
-      "bytes": 10985,
-      "sha256": "4df5f8d85aa1b49a5169c6e5c566372cb4899bba1f7707d6dc15eaca222dc0a5",
+      "bytes": 13843,
+      "sha256": "9e7982a2fb366d2cfb568e631d98fdc97fbc6cd7b41f180d2ddcac9ee0a69476",
       "mode": "0644"
     },
     {
@@ -343,8 +439,8 @@
     },
     {
       "path": "tests/test_rootfs_variants.py",
-      "bytes": 5996,
-      "sha256": "65fb3e4f8a41e17eddc3d613c764c282af865da38c82a035656465a158dec5c1",
+      "bytes": 8515,
+      "sha256": "cb38fa42e56edbefc7a3f942d308da766b964995d2ebee57a82f0301be650ab5",
       "mode": "0644"
     },
     {
@@ -355,8 +451,20 @@
     },
     {
       "path": "tools/build.py",
-      "bytes": 29369,
-      "sha256": "0e0e87a810f1e01c98ee05525879d8e0d1b4d12518a2302a470e9e97e3ddf4f0",
+      "bytes": 30120,
+      "sha256": "5d97d82dd1aebeef59b9d9aa78affa8ed771d03398f423c044693c06478acc59",
+      "mode": "0755"
+    },
+    {
+      "path": "tools/build_gpu_kmod.py",
+      "bytes": 12608,
+      "sha256": "b47b03ea1b69e28d4b5e08ca93098d5aeb7dc640ca67b7a2f60bd24cc5ef82ed",
+      "mode": "0755"
+    },
+    {
+      "path": "tools/desktop.py",
+      "bytes": 5561,
+      "sha256": "b4f975167e9f9899329ef7ff84d040cd85d731c51c8a0a7e6a13a23e0dc26f5b",
       "mode": "0755"
     },
     {
@@ -367,8 +475,8 @@
     },
     {
       "path": "tools/export_source.py",
-      "bytes": 9486,
-      "sha256": "8a79ec6b6d87d275da52d115ad02e5251e71459fab7d6797f74bd008599e9379",
+      "bytes": 10034,
+      "sha256": "7b6ac8391a2c68960b4c1366ceede7f27733ff1c4d1ee4e45f083941e15b09fd",
       "mode": "0755"
     },
     {
@@ -386,19 +494,19 @@
     {
       "path": "tools/package_base.py",
       "bytes": 5434,
-      "sha256": "23fe1e2f860ecb6caebbfef0079f83b3604912ef88e44e7608fd174fe46f2c20",
+      "sha256": "b8423f640246a2ff3fd213a98b42ce55d7ab2a8dfa27e24012022168a34259c2",
       "mode": "0755"
     },
     {
       "path": "tools/package_bsp.py",
-      "bytes": 25502,
-      "sha256": "6a93bd398e403a0c2ee99048f5baa6e56a12c769e23db61b8983a264453d296b",
+      "bytes": 31341,
+      "sha256": "5dc9e0269517a1ee096a7f69b0a69be36d366c1babf8730bf06272b7ab0825fe",
       "mode": "0755"
     },
     {
       "path": "tools/package_gpu.py",
       "bytes": 21573,
-      "sha256": "2445d0962ae5ffe05274c36c9c605d628f731cfb8b5b02c0121d22927a5a819f",
+      "sha256": "43aa4cfad49661050deaa0d3d1649d8df2d2c95d914f750e610249e8e4b850ba",
       "mode": "0755"
     },
     {
@@ -415,8 +523,8 @@
     },
     {
       "path": "tools/rootfs.py",
-      "bytes": 17332,
-      "sha256": "dd916add29943aa33cde361dfbfad334b6af0dfe3f725077d8cf8f5ec52974a6",
+      "bytes": 18310,
+      "sha256": "f6661a44fb42cdbba2307dde5fbeb541d444211b77c395ce7bb240778b90ef0b",
       "mode": "0755"
     },
     {

@@ -1,0 +1,11 @@
+[Default Applications]
+text/html=a7z-chromium.desktop;
+application/xhtml+xml=a7z-chromium.desktop;
+x-scheme-handler/http=a7z-chromium.desktop;
+x-scheme-handler/https=a7z-chromium.desktop;
+
+[Added Associations]
+text/html=a7z-chromium.desktop;
+application/xhtml+xml=a7z-chromium.desktop;
+x-scheme-handler/http=a7z-chromium.desktop;
+x-scheme-handler/https=a7z-chromium.desktop;

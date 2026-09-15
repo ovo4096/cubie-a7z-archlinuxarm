@@ -11,7 +11,7 @@ import sys
 import package_bsp as bsp
 
 PACKAGE = "radxa-a7z-base"
-VERSION = "0.1.0-3"
+VERSION = "0.1.0-4"
 SPEC = {
     "version": VERSION,
     "description": "Arch Linux ARM A7Z boot preparation, first boot and SD/UFS runtime tools",
