@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "project": "cubie-a7z-archlinuxarm",
-  "created_utc": "2026-09-15T12:56:43.641261+00:00",
+  "created_utc": "2026-09-15T15:33:53.036294+00:00",
   "scope": "Explicitly allowlisted project source, tests, docs and upstream source lock. No images, packages, private diagnostics, backups or repository history.",
   "audit": {
     "result": "PASS",
@@ -31,14 +31,14 @@
     },
     {
       "path": "INSTALL.zh-CN.md",
-      "bytes": 11081,
-      "sha256": "fcc4cf579469ad1890e7ce34a60caad06d3821aeb2f3edfc69b1b27b2c486a31",
+      "bytes": 11775,
+      "sha256": "6aa16c29ba3ff9d5a8261e6f632efd1aba3056e8f8cc5b9daa853f903ec7fa2a",
       "mode": "0644"
     },
     {
       "path": "KDE.zh-CN.md",
-      "bytes": 14143,
-      "sha256": "7897eb00ebeb6e083ce0e0816e8401d4012e5922e25687ceffa592498f60b150",
+      "bytes": 14526,
+      "sha256": "05a2d625f04dd2b608bd397161b30c4264527bc2d4d9c49558a36c55e6ab7021",
       "mode": "0644"
     },
     {
@@ -49,8 +49,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 9261,
-      "sha256": "38152750c7ac49628b47f0d1dccca77e1590c37e94ba4f5c8411fe2cd5bfa3ef",
+      "bytes": 9653,
+      "sha256": "89bfc1e7a58c36608baaeb13d4c1786aa3a0087e2d5c8255a53a0cca3a0aa64b",
       "mode": "0644"
     },
     {
@@ -61,14 +61,14 @@
     },
     {
       "path": "RELEASE.zh-CN.md",
-      "bytes": 15381,
-      "sha256": "0450f30a01b6324691e1f1a86cd3a73758cce21fef680c6240e250231692665f",
+      "bytes": 16671,
+      "sha256": "e8b4a8a7e2ea7fa6b76954d46e6c4bcf1fd699dbfba1b329f4ebf1a3557c774c",
       "mode": "0644"
     },
     {
       "path": "ROLLING-UPGRADE.zh-CN.md",
-      "bytes": 12632,
-      "sha256": "5150bd313577dd6bfb50337b8bfcc0f361497298605e72e0812dbbbe326c320c",
+      "bytes": 14974,
+      "sha256": "2aad314f0078a25dd974a1236944dc776692096cecd43551375ab25fae7c9dc7",
       "mode": "0644"
     },
     {
@@ -91,14 +91,14 @@
     },
     {
       "path": "desktop/HDMI.zh-CN.md",
-      "bytes": 5282,
-      "sha256": "bb4d53bdf32889223c0fa24b70b78e8c8d22b2826055418e72c494f75c54c2eb",
+      "bytes": 3834,
+      "sha256": "7f59a8bc97cdfa674b51715690516be10ae1274e0837d26a356dd6258d12596b",
       "mode": "0644"
     },
     {
       "path": "desktop/README.zh-CN.md",
-      "bytes": 4390,
-      "sha256": "2ba1c5fc81664c003818b3d7d4253a23a2c042c5695407d8199286398535ff9a",
+      "bytes": 4387,
+      "sha256": "d6f8ce33b99c59bff2d9344bbbf2e4610a0402192c32a5a3b5324427c35d2b12",
       "mode": "0644"
     },
     {
@@ -282,6 +282,24 @@
       "mode": "0755"
     },
     {
+      "path": "kernel/hdmi/0001-drm-sunxi-keep-atomic-output-state-across-hpd.patch",
+      "bytes": 2125,
+      "sha256": "d1120ec8ae35177a63f2ccc77df4d47355ae0085a4e76f0dc771dd75be69914f",
+      "mode": "0644"
+    },
+    {
+      "path": "kernel/hdmi/README.md",
+      "bytes": 5492,
+      "sha256": "2be6bbd14e9ac3865ca9514ae91bfc7ab621881481945c97bd22f4c204be0a9a",
+      "mode": "0644"
+    },
+    {
+      "path": "kernel/hdmi/build-input.lock.json",
+      "bytes": 3809,
+      "sha256": "b981fa2f36f498d720b8fe7a24f0c07124aade91b9a59ae772e8431c0013adbf",
+      "mode": "0644"
+    },
+    {
       "path": "packages/base/LICENSE",
       "bytes": 1093,
       "sha256": "dbd00de96244629d2a3fb54c942f19a940821d0590644f634881bfab39593d86",
@@ -330,9 +348,9 @@
       "mode": "0644"
     },
     {
-      "path": "runtime/a7z-hdmi-compat",
-      "bytes": 11935,
-      "sha256": "94d99432343f5aaa0a8c92158903d764c3a011a6b8eab679bfbe976145721f8a",
+      "path": "runtime/a7z-hdmi-migrate",
+      "bytes": 5170,
+      "sha256": "80e24b62f5743e63ef8461977cee377b959494d2fd2206341e90279c0cbf3b08",
       "mode": "0755"
     },
     {
@@ -357,6 +375,12 @@
       "path": "runtime/boot/50-a7z-boot-snapshot.hook",
       "bytes": 256,
       "sha256": "8fe6025547997d46974ead16d7221e09619c22c998235e24e28f8a3a1aaa54b9",
+      "mode": "0644"
+    },
+    {
+      "path": "runtime/boot/92-a7z-hdmi-migrate.hook",
+      "bytes": 248,
+      "sha256": "f1606d6e26600ab6ea0f14a87f6573c38bf3d74dd984d137ad2885e7a3454dc5",
       "mode": "0644"
     },
     {
@@ -451,8 +475,8 @@
     },
     {
       "path": "tests/test_rootfs_variants.py",
-      "bytes": 8515,
-      "sha256": "cb38fa42e56edbefc7a3f942d308da766b964995d2ebee57a82f0301be650ab5",
+      "bytes": 8589,
+      "sha256": "d4712a49027582f6e88b7b5b6fd0c1453d066489dbdfe57ed8106eb4c1eac8a6",
       "mode": "0644"
     },
     {
@@ -463,14 +487,20 @@
     },
     {
       "path": "tools/build.py",
-      "bytes": 30120,
-      "sha256": "5d97d82dd1aebeef59b9d9aa78affa8ed771d03398f423c044693c06478acc59",
+      "bytes": 31180,
+      "sha256": "6e734547ddbfb3b8b32d4a253b9bdbf02473f4f21890bc28f71eac26c8206091",
       "mode": "0755"
     },
     {
       "path": "tools/build_gpu_kmod.py",
       "bytes": 12608,
       "sha256": "b47b03ea1b69e28d4b5e08ca93098d5aeb7dc640ca67b7a2f60bd24cc5ef82ed",
+      "mode": "0755"
+    },
+    {
+      "path": "tools/build_hdmi_kernel.py",
+      "bytes": 16136,
+      "sha256": "7433bbdb98992bc1c6f540e012f6577cfa9ad7a2a5682cfb59b2d384951b5876",
       "mode": "0755"
     },
     {
@@ -487,8 +517,8 @@
     },
     {
       "path": "tools/export_source.py",
-      "bytes": 10086,
-      "sha256": "2ef0f8b20ec0f673e90861297a25a4b786b9331b078f9a411159f0d9500cff74",
+      "bytes": 10300,
+      "sha256": "1f4b5f6c89cf68309aba3c627ba530f024215f4d3f5b4882467990ea545efb86",
       "mode": "0755"
     },
     {
@@ -505,26 +535,26 @@
     },
     {
       "path": "tools/package_base.py",
-      "bytes": 5453,
-      "sha256": "0fab1dd969d61153cf92893d7dc3b2a82773c38ab174d34b56714ac01a38c4aa",
+      "bytes": 5538,
+      "sha256": "05dc41765b8f00490057673bc8071b16b5d588c84780e7b95f5713496f2ee13a",
       "mode": "0755"
     },
     {
       "path": "tools/package_bsp.py",
-      "bytes": 31341,
-      "sha256": "5dc9e0269517a1ee096a7f69b0a69be36d366c1babf8730bf06272b7ab0825fe",
+      "bytes": 33448,
+      "sha256": "9cb377dac700e3d2f744a3903162b97f32811a8cf6fa3530c441a98c90fa8aac",
       "mode": "0755"
     },
     {
       "path": "tools/package_gpu.py",
       "bytes": 21573,
-      "sha256": "43aa4cfad49661050deaa0d3d1649d8df2d2c95d914f750e610249e8e4b850ba",
+      "sha256": "b4fa00c97dbc594f0261de5922fc269efd6be0cb80db04c0125f6e6deaad36bb",
       "mode": "0755"
     },
     {
       "path": "tools/package_vpu.py",
       "bytes": 11778,
-      "sha256": "adb6969ebadb86638d001c1301599b07f0b019a5aa48eaa81bd28c7e7bc2e695",
+      "sha256": "57bb3fd4d925a00e4f3c4e1aaf025f3a3b7b1c8b0ae541c173e8f20249edb61e",
       "mode": "0755"
     },
     {
@@ -535,8 +565,8 @@
     },
     {
       "path": "tools/rootfs.py",
-      "bytes": 19265,
-      "sha256": "a2d4178b0c35b06148a276fe6d526bf8b19c8a54b2f4acd22999ed8efbea1c25",
+      "bytes": 18704,
+      "sha256": "c5c55d323feaa890f06a37997820f98d76996922f9f1602c0f2d55416bb581a1",
       "mode": "0755"
     },
     {

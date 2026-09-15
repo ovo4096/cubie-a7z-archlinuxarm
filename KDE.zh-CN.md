@@ -1,10 +1,10 @@
 # KDE 中文桌面、Chromium 与 T5 图形边界
 
-本项目提供三个独立构建变体：`cli` 使用命令行和网络管理工具，`xfce` 使用 XFCE + LightDM，`kde` 使用 Plasma X11 + SDDM。常规构建从锁定的 Arch Linux ARM seed 独立解包；本版按 `input_reuse` 记录复用构建机上同变体、已经净化的中间 rootfs，再完整更新和重建全部板级包及镜像。三个变体不混用已安装其他桌面的根文件系统，也不从测试板导出用户系统。
+本项目提供三个独立构建变体：`cli` 使用命令行和网络管理工具，`xfce` 使用 XFCE + LightDM，`kde` 使用 Plasma X11 + SDDM。常规构建从锁定的 Arch Linux ARM seed 独立解包；v0.2.2 补丁发行复用构建机上同变体的干净离线 rootfs 和既有包快照，安装新内核及配套板级包后重新生成镜像，没有执行 `pacman -Syu`。三个变体不混用已安装其他桌面的根文件系统，也不从测试板导出用户系统。
 
 `v0.2.0-t5` 的 KDE 配方与 XFCE 一样预装 **Chromium（PowerVR）** 和 **Fcitx5 + Rime**，设置中文会话、字体与默认网页关联。桌面沿用此前实测的 SDDM/Plasma PowerVR Vulkan 配置；KWin 窗口合成保持关闭。网页 GPU 绘制和 Chromium 视频硬解是两项能力，后者仍未接通，不能把桌面配置的改进理解为浏览器视频已硬解。
 
-本页说明默认配置、使用方法及兼容边界；本版最终 KDE UFS 镜像的实机验收结果统一记录于 [发行说明](RELEASE.zh-CN.md)，KDE SD 镜像通过离线审计但未单独实机启动。
+`v0.2.2-t5` 加入与 CLI / XFCE 相同的 HDMI 内核补丁，移除 SDDM 的旧 `95-a7z-hdmi-compat.conf` 钩子；保留 `70-a7z-desktop.conf`、PowerVR Vulkan 和原系统 Xsetup / Xstop。HDMI 不再依赖启动脚本强制 HPD。此前只在 CLI 确认了两次启动与一次同屏拔插，本次 KDE 新包和 SD / UFS 镜像没有新增测试。HDCP、换显示器和休眠恢复边界见 [HDMI 说明](desktop/HDMI.zh-CN.md)，本次范围见 [发行说明](RELEASE.zh-CN.md)。
 
 ## 当前上游与选择
 
@@ -99,18 +99,20 @@ sudo a7z-gpu-desktop enable arch-software --display-manager sddm
 顶层使用不同工作目录：
 
 ```sh
-python3 tools/build.py --variant cli --work-dir /root/a7z-archlinux-work/build-cli
-python3 tools/build.py --variant kde --work-dir /root/a7z-archlinux-work/build-kde
+python3 tools/build.py --variant cli --work-dir /root/a7z-archlinux-work/build-cli --hdmi-kernel-input /path/to/hdmi-kernel-input
+python3 tools/build.py --variant kde --work-dir /root/a7z-archlinux-work/build-kde --hdmi-kernel-input /path/to/hdmi-kernel-input
 ```
 
 CLI 的 GPU 包步骤使用 `package_gpu.py --components userspace --strict --target-root ROOT ...`，只打包和检查实际安装的私有用户态，不为可选 vendor Xorg 引入整套额外依赖。默认 `--components all` 保留原三包输出用于对照。不同组件审计的报告明确记录 `audited_components`，不能把仅用户态的通过当成可选 vendor Xorg 也已验证。
 
-本版使用 `radxa-a7z-gpu-kmod 0.1.0_3-3`、GPU 用户态包 `24.2.6603887_t5-7` 和 base `0.1.0-4`。GPU 模块包含 [fdinfo 修复](gpu/kernel/README.md)，防止信息查询在缺少私有连接时触发原 T5 模块的空指针崩溃。此补丁不改变 KWin 合成或 Chromium 视频解码的边界。
+本版使用 HDMI 内核包 `6.6.98_4-2`、`radxa-a7z-gpu-kmod 0.1.0_3-4`、GPU 用户态包 `24.2.6603887_t5-8` 和 base `0.1.0-6`。GPU 包修订用于匹配依赖，沿用已有 [fdinfo 修复](gpu/kernel/README.md)。本次未运行桌面或滚动升级测试，未改变 KWin 合成或 Chromium 视频解码的边界。
 
-2026-09-15，最终 KDE UFS 镜像完成整盘写后回读、首次启动和扩容、Wi-Fi 联网、SDDM 正常登录、完整更新及 Mesa/libglvnd/libdrm 重装。更新后 Chromium 的 PowerVR WebGL 1/2 像素绘制与 Rime 输入「你好世界」、Kate 中文输入及保存均通过。Plasma 映射私有 PowerVR Vulkan 库，Xorg 使用 PowerVR glamor；KWin 保持软件回退且关闭合成。
+### 历史记录：v0.2.0-t5
+
+2026-09-15，v0.2.0 最终 KDE UFS 镜像完成整盘写后回读、首次启动和扩容、Wi-Fi 联网、SDDM 正常登录、完整更新及 Mesa/libglvnd/libdrm 重装。更新后 Chromium 的 PowerVR WebGL 1/2 像素绘制与 Rime 输入「你好世界」、Kate 中文输入及保存均通过。Plasma 映射私有 PowerVR Vulkan 库，Xorg 使用 PowerVR glamor；KWin 保持软件回退且关闭合成。
 
 实际输入空闲 982,162 ms 后，PowerDevil 仍在 AC 模式，自动休眠动作值为 0，网络可用；随后密码解锁、正常注销和重新登录通过。跟踪重启后，根分区、板级包与自动加载的 GPU 模块身份正确，系统无失败服务；再次登录后的 Chromium 绘制及中文输入也通过。本轮 UFS 启动由串口临时选择，SD 卡保持插入，未把它计为拔卡后的独立冷启动或休眠恢复测试。
 
 浏览器与独立 GStreamer 分别播放本地 15 秒、450 帧的 H.264 1080p30 样片，均未报告丢帧。Chromium 使用 `FFmpegVideoDecoder` 软件解码；独立 OMX 路径的 Cedar 中断增加 450。后者协商为 SystemMemory YV12 1920×1088，本次未验证裁剪元数据、音频输出或零拷贝。浏览器命名空间和 Seccomp-BPF/TSYNC 已启用，但 GPU 信息中的 `sandboxed=false`，不能据此认定 GPU 进程受沙箱保护。
 
-最终结果统一列在 [发行说明](RELEASE.zh-CN.md)。此前系统的图形包更新事务及其后复测保留在 [滚动升级说明](ROLLING-UPGRADE.zh-CN.md)，用于限定已测版本和范围；它们不代替本版最终镜像验收，也不保证未来 Qt、Plasma 或 Chromium 的兼容性。
+上述历史结果及图形包更新事务保留在 [滚动升级说明](ROLLING-UPGRADE.zh-CN.md)，用于限定已测版本和范围；它们不代替 v0.2.2 新镜像验收，也不保证未来 Qt、Plasma 或 Chromium 的兼容性。

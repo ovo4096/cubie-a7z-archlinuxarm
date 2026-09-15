@@ -11,11 +11,11 @@ import sys
 import package_bsp as bsp
 
 PACKAGE = "radxa-a7z-base"
-VERSION = "0.1.0-5"
+VERSION = "0.1.0-6"
 SPEC = {
     "version": VERSION,
     "description": "Arch Linux ARM A7Z boot preparation, first boot and SD/UFS runtime tools",
-    "depends": ["python", "bash", "coreutils", "kmod", "mkinitcpio", "util-linux", "e2fsprogs", "dosfstools", "gptfdisk", "cloud-guest-utils", "systemd", "linux-radxa-a7z=6.6.98_4-1", "radxa-a7z-bootloader", "radxa-a7z-wireless"],
+    "depends": ["python", "bash", "coreutils", "kmod", "mkinitcpio", "util-linux", "e2fsprogs", "dosfstools", "gptfdisk", "cloud-guest-utils", "systemd", "linux-radxa-a7z=6.6.98_4-2", "radxa-a7z-bootloader", "radxa-a7z-wireless"],
     "licenses": ["MIT"],
 }
 BOOT_MAPPING = {
@@ -23,10 +23,11 @@ BOOT_MAPPING = {
     "linux-radxa-a7z.preset": "usr/share/a7z/linux-radxa-a7z.preset",
     "cmdline": "etc/kernel/cmdline",
     "50-a7z-boot-snapshot.hook": "usr/share/libalpm/hooks/50-a7z-boot-snapshot.hook",
+    "92-a7z-hdmi-migrate.hook": "usr/share/libalpm/hooks/92-a7z-hdmi-migrate.hook",
     "99-a7z-boot-update.hook": "usr/share/libalpm/hooks/99-a7z-boot-update.hook",
     "extlinux.conf.example": "usr/share/a7z/extlinux.conf.example",
 }
-REQUIRED_RUNTIME = ("a7z-boot-update", "a7z-firstboot", "a7z-grow-root", "a7z-install-ufs", "a7z-firstboot.service", "a7z-grow-root.service", "a7z-hdmi-compat")
+REQUIRED_RUNTIME = ("a7z-boot-update", "a7z-firstboot", "a7z-grow-root", "a7z-install-ufs", "a7z-firstboot.service", "a7z-grow-root.service", "a7z-hdmi-migrate")
 BACKUPS = ("etc/kernel/cmdline", "etc/mkinitcpio-a7z.conf")
 
 

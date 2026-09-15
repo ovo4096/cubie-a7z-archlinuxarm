@@ -87,7 +87,7 @@ def file_records(paths, base=None):
 
 def recipe_files():
     selected = []
-    for directory in ("tools", "runtime", "gpu", "vpu", "desktop", "packages"):
+    for directory in ("tools", "runtime", "gpu", "vpu", "desktop", "packages", "kernel"):
         for path in (REPO / directory).rglob("*"):
             if path.is_file() and not path.is_symlink() and "__pycache__" not in path.parts and "work" not in path.parts:
                 if path.suffix not in (".pyc", ".deb", ".zst", ".gz", ".xz"):
@@ -220,6 +220,15 @@ class Build:
         self.cache = safe_directory(args.cache, "source cache")
         self.lock_path = Path(args.lock).resolve(strict=True)
         self.lock = json.loads(self.lock_path.read_text())
+        self.hdmi_kernel_input = Path(args.hdmi_kernel_input).resolve(strict=True)
+        if not self.hdmi_kernel_input.is_dir():
+            raise ValueError("--hdmi-kernel-input must be the prepared HDMI kernel input directory")
+        if any(not (self.hdmi_kernel_input / name).is_file() or (self.hdmi_kernel_input / name).is_symlink()
+               for name in ("Image", "config", "System.map", "provenance.json")):
+            raise ValueError("HDMI kernel input requires regular Image, config, System.map and provenance.json files")
+        self.hdmi_kernel_records = file_records(
+            [self.hdmi_kernel_input / name for name in ("Image", "config", "System.map", "provenance.json")],
+            self.hdmi_kernel_input)
         self.seed = Path(args.config_dir).resolve(strict=True) if args.config_dir else None
         if self.seed and not self.seed.is_dir():
             raise ValueError("--config-dir is not a directory")
@@ -232,6 +241,7 @@ class Build:
         self.epoch = int(self.lock["source_date_epoch"])
         self.recipes = file_records(recipe_files(), REPO)
         self.spec = {"source_lock_sha256": digest(self.lock_path), "variant": args.variant,
+                     "hdmi_kernel_inputs": self.hdmi_kernel_records,
                      "mirror": args.mirror, "root_size_mib": args.root_size_mib,
                      "private_seed_sha256": seed_fingerprint(self.seed),
                      "password_source": "environment" if os.environ.get("A7Z_IMAGE_PASSWORD") else "rootfs-seed-default",
@@ -307,7 +317,7 @@ class Build:
 
     def package_payloads(self):
         script("package_bsp.py", "--vendor-root", self.vendor, "--output", self.packages / "bsp",
-               "--source-date-epoch", self.epoch)
+               "--source-date-epoch", self.epoch, "--hdmi-kernel-input", self.hdmi_kernel_input)
         gpu_args = ["--vendor-root", self.vendor, "--target-root", self.root,
                     "--strict", "--output", self.packages / "gpu", "--epoch", self.epoch]
         if self.args.variant == "cli":
@@ -494,6 +504,8 @@ def main():
     parser.add_argument("--work-dir", default="/root/a7z-archlinux-work/build-xfce")
     parser.add_argument("--cache", default=str(REPO / ".cache/upstream"))
     parser.add_argument("--lock", default=str(REPO / "config/sources.lock.json"))
+    parser.add_argument("--hdmi-kernel-input", required=True,
+                        help="HDMI kernel input prepared by tools/build_hdmi_kernel.py or extracted from the matching release bundle")
     parser.add_argument("--variant", choices=("xfce", "cli", "kde"), default="xfce")
     parser.add_argument("--mirror", default="https://mirrors.tuna.tsinghua.edu.cn/archlinuxarm")
     parser.add_argument("--config-dir", help="optional private seed; never copied into the generic rootfs")

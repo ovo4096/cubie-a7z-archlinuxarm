@@ -23,14 +23,14 @@ except ImportError:
 
 REPO = Path(__file__).resolve().parents[1]
 NAME = 'radxa-a7z-vpu'
-VERSION = '0.1.0-2'
+VERSION = '0.1.0-3'
 PRIVATE = 'usr/lib/radxa-a7z-vpu'
 SHARE = 'usr/share/radxa-a7z-vpu'
 LICENSES = 'usr/share/licenses/radxa-a7z-vpu'
 PACKAGES = {'libcedarc-dev-2.0.0-arm64': '1.0.7',
             'gstreamer1.0-omx-allwinner': '1.18.3-1.1',
             'gstreamer1.0-omx-allwinner-config': '1.18.3-1.1'}
-DEPS = ['glibc', 'bash', 'coreutils', 'systemd', 'linux-radxa-a7z=6.6.98_4-1',
+DEPS = ['glibc', 'bash', 'coreutils', 'systemd', 'linux-radxa-a7z=6.6.98_4-2',
         'gstreamer', 'gst-plugins-base', 'gst-plugins-good', 'gst-plugins-bad']
 SOURCE_URL = 'https://github.com/radxa-build/radxa-a733/releases/tag/rsdk-t5'
 

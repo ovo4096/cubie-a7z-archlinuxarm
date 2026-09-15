@@ -1,0 +1,10 @@
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = radxa-a7z-base
+
+[Action]
+Description = Removing obsolete project HDMI login hooks while preserving custom settings...
+When = PostTransaction
+Exec = /usr/bin/a7z-hdmi-migrate

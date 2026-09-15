@@ -1,6 +1,6 @@
 # 日常维护与滚动升级
 
-本页说明完整更新方法、板级组件的保护措施和各次测试范围。本版最终镜像的维护结果见后文及 [发行说明](RELEASE.zh-CN.md)。更新事务成功或文件哈希不变不能代替更新后的硬件复测，也不能保证未来版本兼容性。
+本页说明完整更新方法、板级组件的保护措施和各次测试范围。**v0.2.2 的新包和六张新镜像没有开展滚动升级、自动化或实机测试；下文 v0.2.0 的维护记录属于历史结果。** 更新事务成功或文件哈希不变不能代替更新后的硬件复测，也不能保证未来版本兼容性。本次范围见 [发行说明](RELEASE.zh-CN.md)。
 
 日常更新使用完整事务：
 
@@ -17,7 +17,7 @@ sudo reboot
 
 GPU 模块修订 `0.1.0_3-3` 使用官方的 XZ CRC32 校验与 1 MiB 字典。此前候选模块的 CRC64 校验触发 T5 模块解压器的 `status 6` 拒绝；已定位的问题是校验算法不兼容，不能把它归因于 8 MiB 字典。压缩格式修复与 [fdinfo 修复](gpu/kernel/README.md) 是两项独立检查；旧候选上的诊断和手动加载结果不计为最终镜像的首启、自动加载或升级后验收。
 
-`radxa-a7z-base` 的 pacman hook 在 BSP 内核升级前保留旧内核、DTB、模块和 initramfs。升级后生成版本化启动文件，保留 extlinux 原默认入口。要明确切换内核才执行 `sudo a7z-boot-update --select`。
+`radxa-a7z-base` 的 pacman hook 在 BSP 内核升级前保留旧内核、DTB、模块和 initramfs。升级后生成版本化启动文件，保留 extlinux 原默认标签；要明确切换内核可执行 `sudo a7z-boot-update --select`。**v0.2.2 的内核 release 仍为 `6.6.98-4-aw2511`，版本化路径和普通标签不变，所以旧默认标签不等于保留了旧 Image。** 同 release 的已有快照不会被重复覆盖；必须另备份当前系统，不能仅依赖自动快照回退到最近状态。
 
 从 `radxa-a7z-base 0.1.0-3` 起，标准 mkinitcpio hook 输出到 `.img.pending`，项目 hook 另行生成 `.img.new`，成功后原子替换启动用的 `.img`。失败不应把原启动镜像截断。项目 hook 覆盖 mkinitcpio、systemd、固件和相关启动依赖文件更新。手工重建请使用：
 
@@ -28,6 +28,36 @@ sudo a7z-boot-update --initramfs
 单独运行 `mkinitcpio -P` 只生成暂存输出，不完成这里的提交步骤。
 
 T5 内核没有 Landlock。镜像只设置 `DisableSandboxFilesystem`，保留 pacman 下载用户权限隔离和系统调用过滤；日常升级不需要 `--disable-sandbox`。
+
+## 从标准 v0.2.1 升级板级包
+
+先备份系统和个人数据，保留可启动的 SD 恢复卡。下载本发布页的配套包与 `SHA256SUMS` 到新目录，全部校验成功后，再在该目录执行同一次板级包事务。下面的五个基础包必须同时更新；已安装 VPU 的桌面还要加入第六个包，CLI 不需额外安装 VPU。
+
+```sh
+sha256sum --ignore-missing -c SHA256SUMS
+packages=(
+  ./linux-radxa-a7z-6.6.98_4-2-aarch64.pkg.tar.zst
+  ./radxa-a7z-base-0.1.0-6-aarch64.pkg.tar.zst
+  ./radxa-a7z-wireless-5.0+git20260123.5f7be68d_7-2-aarch64.pkg.tar.zst
+  ./radxa-a7z-gpu-kmod-0.1.0_3-4-aarch64.pkg.tar.zst
+  ./radxa-a7z-gpu-userspace-24.2.6603887_t5-8-aarch64.pkg.tar.zst
+)
+if pacman -Q radxa-a7z-vpu >/dev/null 2>&1; then
+  packages+=(./radxa-a7z-vpu-0.1.0-3-aarch64.pkg.tar.zst)
+fi
+sudo pacman -U "${packages[@]}"
+```
+
+每一步成功才继续；不要用 `--nodeps` 或 `--overwrite '*'` 绕过依赖 / 文件冲突。上述是标准发行系统的本地板级包更新，不同步 Arch 仓库；日常仓库更新仍使用完整 `pacman -Syu`，不要先 `pacman -Sy` 再只升级零散包。自行安装了可选 vendor Xorg 或修改过 BSP 依赖的系统，需要先解决对应的完整依赖组。
+
+base 的迁移 hook 移除 LightDM / SDDM 原版 95 HDMI 钩子，并保留 70 GPU 配置、其他设置和系统默认 Xsetup / Xstop。若输出报告保留了自定义旧命令，应先人工处理；不要在新 helper 已移除后继续引用它。迁移不关闭当前桌面，也不触碰当前 HPD；完成事务和 initramfs 生成后，重启进入补丁内核：
+
+```sh
+sudo a7z-boot-update --select
+sudo reboot
+```
+
+`uname -r` 仍显示 `6.6.98-4-aw2511`；区分包修订应查看 `pacman -Q linux-radxa-a7z radxa-a7z-base` 和发布页构建记录。升级操作及新桌面本轮均未实测；HDMI、HDCP 和休眠限制见 [HDMI 说明](desktop/HDMI.zh-CN.md)。
 
 ## 历史测试：2026-09-14
 
@@ -73,11 +103,11 @@ KDE 新增测试版本为 Qt6 base `6.11.2-3`、Qt6 declarative `6.11.2-1`、Pla
 
 该候选随后在重启期间因 PowerVR `pvr_show_fdinfo` 空指针触发 kernel panic，因此未通过发布验收。证据定位到旧 GPU 模块的信息查询路径，不能认定是 `libde265` 升级造成。此记录保留了实际升级范围，也说明短测和文件哈希不变不足以证明重启稳定性。
 
-### 本版最终镜像的维护验证
+### 历史记录：v0.2.0 最终镜像的维护验证
 
-本次发行构建复用构建机上经清理检查的同变体预制 rootfs，再按新配方执行完整 `pacman -Syu`、全部板级包的重新打包与安装、启动配置、清理和新镜像生成。输入不包含开发板上的系统或个人数据；没有重新解包 Arch 初始归档。审计后的 `build-manifest-*.json` 用 `input_reuse` 保存父构建相关哈希及实际重跑范围，用 `fresh_arch_seed_extracted=false` 明确记录复用方式。构建机上的更新事务不代替以下实机维护测试。
+v0.2.0 发行构建复用构建机上经清理检查的同变体预制 rootfs，再按当时配方执行完整 `pacman -Syu`、全部板级包的重新打包与安装、启动配置、清理和新镜像生成。输入不包含开发板上的系统或个人数据；没有重新解包 Arch 初始归档。审计后的 `build-manifest-*.json` 用 `input_reuse` 保存父构建相关哈希及实际重跑范围，用 `fresh_arch_seed_extracted=false` 明确记录复用方式。构建机上的更新事务不代替以下实机维护测试。
 
-本版使用带 [fdinfo 修复](gpu/kernel/README.md) 的 `radxa-a7z-gpu-kmod 0.1.0_3-3`、GPU 用户态 `24.2.6603887_t5-7` 和 base `0.1.0-4`。本轮在 CLI SD、KDE UFS、XFCE SD 上记录完整 `pacman -Syu`、同版本重装项目、事务前后驱动文件哈希及随后的硬件复测；未启动的另外三个文件不借用这些结果。CLI 只测试其已安装包，不为维护测试安装图形组件；桌面版另执行 Mesa、libglvnd、libdrm 的完整更新/重装事务。测试时仓库均没有新版本，因此本轮证明的是完整更新流程和同版本重装后的回归，未模拟未来 ABI 变化。
+v0.2.0 使用带 [fdinfo 修复](gpu/kernel/README.md) 的 `radxa-a7z-gpu-kmod 0.1.0_3-3`、GPU 用户态 `24.2.6603887_t5-7` 和 base `0.1.0-4`。当时在 CLI SD、KDE UFS、XFCE SD 上记录完整 `pacman -Syu`、同版本重装项目、事务前后驱动文件哈希及随后的硬件复测；未启动的另外三个文件不借用这些结果。CLI 只测试其已安装包，不为维护测试安装图形组件；桌面版另执行 Mesa、libglvnd、libdrm 的完整更新/重装事务。测试时仓库均没有新版本，因此该轮证明的是完整更新流程和同版本重装后的回归，未模拟未来 ABI 变化。
 
 CLI SD 最终文件（原始 SHA256 `535459d71badebf1e888b0a48daf334a7a895255c7aff6049fe31c918ee8ddcc`）在 2026-09-15 完成首启与完整 `pacman -Syu`。当时仓库无待升级包；事务前后 7,617 个 BSP、固件、GPU 和启动相关文件一致，生成的 initramfs 也未变化。随后普通重启通过，根 UUID 保持正确，Wi-Fi/SSH 正常、没有失败的系统服务，修复后的 GPU 模块再次自动加载。此项不包含图形桌面或跨版本升级。
 

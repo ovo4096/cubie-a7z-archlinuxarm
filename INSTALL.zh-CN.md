@@ -1,10 +1,10 @@
 # 安装到 SD 或板载 UFS
 
-本指南适用于 `v0.2.1-t5` 的 CLI、XFCE 和 KDE 镜像。UFS 的主要安装方式是**先从 SD 启动，在板上下载 UFS 镜像，解压后用 `dd` 写入整块 UFS**，与 [Radxa 官方 UFS 流程](https://docs.radxa.com/cubie/a7z/getting-started/install-system/ufs) 一致。项目安装器保留为第二选项。
+本指南适用于 `v0.2.2-t5` 的 CLI、XFCE 和 KDE 镜像。UFS 的主要安装方式是**先从 SD 启动，在板上下载 UFS 镜像，解压后用 `dd` 写入整块 UFS**，与 [Radxa 官方 UFS 流程](https://docs.radxa.com/cubie/a7z/getting-started/install-system/ufs) 一致。项目安装器保留为第二选项。
 
 ## 1. 选择文件并准备首次联网
 
-从 [v0.2.1-t5 发布页](https://github.com/ovo4096/cubie-a7z-archlinuxarm/releases/tag/v0.2.1-t5) 下载：
+从 [v0.2.2-t5 发布页](https://github.com/ovo4096/cubie-a7z-archlinuxarm/releases/tag/v0.2.2-t5) 下载：
 
 | 文件名中的字段 | 用途 |
 |---|---|
@@ -51,11 +51,11 @@ sync
 以下示例把 KDE 安装到 UFS。希望安装 XFCE 或 CLI 时，只把 `variant=kde` 改为 `xfce` 或 `cli`。在已经从 SD 启动的开发板终端中执行：
 
 ```sh
-mkdir -p ~/a7z-ufs-v0.2.1
-cd ~/a7z-ufs-v0.2.1
+mkdir -p ~/a7z-ufs-v0.2.2
+cd ~/a7z-ufs-v0.2.2
 variant=kde
 image="cubie-a7z-archlinuxarm-${variant}-t5-ufs-4096.img"
-base='https://github.com/ovo4096/cubie-a7z-archlinuxarm/releases/download/v0.2.1-t5'
+base='https://github.com/ovo4096/cubie-a7z-archlinuxarm/releases/download/v0.2.2-t5'
 df -h .
 curl --fail --location --retry 3 --remote-name "$base/$image.zst"
 curl --fail --location --retry 3 --remote-name "$base/$image.sha256"
@@ -148,7 +148,13 @@ sudo a7z-install-ufs --image "$image" --target "$target"
 
 在官方 Debian SD 系统中使用源码安装器，先安装 `python3 util-linux fdisk gdisk e2fsprogs`，再运行 `sudo python3 runtime/a7z-install-ufs ...`。安装器只接受原始 `.img`，不接受压缩包或 PhoenixSuit 专用固件。
 
+## 已有系统升级
+
+已有标准 v0.2.1 系统不必重刷镜像；备份并保留 SD 恢复卡后，可安装发布页配套的内核、base、无线、GPU 以及桌面已安装的 VPU 包。必须在同一次 `pacman -U` 事务中更新匹配的依赖组，随后重启进入新内核；准确文件清单与命令见 [升级说明](ROLLING-UPGRADE.zh-CN.md#从标准-v021-升级板级包)。本次没有进行新包升级或桌面实机测试。
+
 ## 桌面首次使用
+
+三个变体均使用 HDMI 内核修复，桌面不再安装旧 HDMI 启动兜底。原有 PowerVR Xorg / Vulkan 设置保留；换显示器、HDCP 和休眠恢复尚未完成验证。具体范围见 [HDMI 说明](desktop/HDMI.zh-CN.md)。
 
 XFCE 与 KDE 使用普通密码登录，没有自动登录。两种桌面预装 **Chromium（PowerVR）** 并将其设为默认网页入口；菜单或 `a7z-chromium` 均使用同一优化。正常退出所有浏览器实例后，`a7z-chromium --software` 可回退。查看 `chrome://gpu` 验证网页硬件绘制；当前 Chromium 的视频解码仍为 CPU，详见 [浏览器说明](gpu/CHROMIUM.zh-CN.md)。
 

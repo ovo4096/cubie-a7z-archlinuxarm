@@ -19,13 +19,13 @@ import sys
 import tempfile
 
 PACKAGE = "xserver-xorg-img-bxm-1.21.1-2.deb"
-VERSION = "24.2.6603887_t5-7"
+VERSION = "24.2.6603887_t5-8"
 COMPAT_VERSION = "1.1.1n_t5-3"
 PRIVATE = Path("usr/lib/radxa-a7z-gpu")
 REPO = Path(__file__).resolve().parents[1]
 CORE_DEPS = ["glibc", "gcc-libs", "libdrm", "libx11", "libxcb", "libxshmfence",
              "expat", "zlib", "systemd-libs", "vulkan-icd-loader",
-             "radxa-a7z-gpu-kmod=0.1.0_3-3"]
+             "radxa-a7z-gpu-kmod=0.1.0_3-4"]
 XORG_DEPS = [f"radxa-a7z-gpu-userspace={VERSION}",
              f"radxa-a7z-gpu-compat={COMPAT_VERSION}", "libpciaccess", "pixman",
              "libxfont2", "libxau", "libxdmcp", "libepoxy", "libxcvt",

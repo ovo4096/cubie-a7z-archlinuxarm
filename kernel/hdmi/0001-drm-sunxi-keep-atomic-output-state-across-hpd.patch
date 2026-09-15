@@ -1,0 +1,53 @@
+From: Cubie A7Z Arch Linux ARM contributors
+Subject: [PATCH] drm/sunxi: leave HDMI output state to atomic and PM callbacks
+
+The HPD thread unconditionally disables the transmitter and clears its
+private DRM mode state on a disconnect, without updating the committed
+CRTC state. On reconnect it only probes the sink and emits a hotplug event.
+With the vendor fbdev console there is no client hotplug callback to issue
+a modeset, leaving an active CRTC backed by a disabled transmitter. Short
+HPD pulses while a sink locks to a new mode expose the same mismatch.
+
+Do not alter the committed mode or transmitter state from the HPD path.
+Atomic disable/enable and PM callbacks already own those transitions.
+Keep the real HPD detection, sink-cache invalidation and notifications.
+This does not force a connector, choose a resolution, or replay an atomic
+commit from the HPD thread.
+
+Base: radxa/allwinner-bsp f51e1e6195d4350abc590bff852e213279e660a6
+---
+--- a/drivers/drm/sunxi_drm_hdmi.c
++++ b/drivers/drm/sunxi_drm_hdmi.c
+@@ -1399,14 +1399,16 @@
+ 
+ static int _sunxi_drv_hdmi_hpd_plugout(struct sunxi_drm_hdmi *hdmi)
+ {
+-	int ret = 0;
+-
+ 	hdmi_inf("hdmi drv detect hpd disconnect\n");
+ 
+-	/* clean drm info */
+-	hdmi->hdmi_ctrl.drm_enable   = 0x0;
+-	hdmi->hdmi_ctrl.drm_mode_set = 0x0;
+-	memset(&hdmi->drm_mode, 0x0, sizeof(struct drm_display_mode));
++	/*
++	 * HPD describes the sink connection, not the committed CRTC state.
++	 * Leave the active mode and output to the atomic/PM callbacks: disabling
++	 * the transmitter here leaves an active CRTC with its hardware off.
++	 * A reconnect need not cause another modeset (notably for fbcon).
++	 * The normal HPD notification still lets a modesetting client disable
++	 * the output or select a mode for a different sink.
++	 */
+ 
+ 	hdmi->hdmi_ctrl.drv_pixel_format_cap  = 0x0;
+ 	hdmi->hdmi_ctrl.drv_dynamic_range_cap = 0x0;
+@@ -1417,9 +1419,6 @@
+ 	drm_edid_free(hdmi->hdmi_ctrl.drv_edid_data);
+ #endif
+ 	hdmi->hdmi_ctrl.drv_edid_data = NULL;
+-	ret = _sunxi_drv_hdmi_disable(hdmi);
+-	if (ret != 0)
+-		hdmi_err("sunxi hdmi driver disable failed when plugout.\n");
+ 
+ 	return 0;
+ }

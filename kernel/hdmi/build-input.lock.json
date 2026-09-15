@@ -1,0 +1,90 @@
+{
+  "schema": 1,
+  "fix": "hdmi-hpd-atomic-state",
+  "kernel_release": "6.6.98-4-aw2511",
+  "source_archives": [
+    {
+      "name": "wrapper",
+      "repo": "radxa-pkg/linux-aw2511",
+      "commit": "8c5a51bc80717b33cb2a1c66705f67592b772c92",
+      "url": "https://codeload.github.com/radxa-pkg/linux-aw2511/tar.gz/8c5a51bc80717b33cb2a1c66705f67592b772c92",
+      "bytes": 33722,
+      "sha256": "0ff392e395d32860952214acfbeb96a002e64d24f774f9d83f7505a7201af88b"
+    },
+    {
+      "name": "device-a733",
+      "repo": "radxa/allwinner-device",
+      "commit": "ca4d6c33e4862cf976037ee6305712eb7b3a92b8",
+      "url": "https://codeload.github.com/radxa/allwinner-device/tar.gz/ca4d6c33e4862cf976037ee6305712eb7b3a92b8",
+      "bytes": 5692916,
+      "sha256": "8b2602ec1204aaaa096928986e9087734ef3f07e1a8dfdfd10079c839699bacd"
+    },
+    {
+      "name": "bsp",
+      "repo": "radxa/allwinner-bsp",
+      "commit": "f51e1e6195d4350abc590bff852e213279e660a6",
+      "url": "https://codeload.github.com/radxa/allwinner-bsp/tar.gz/f51e1e6195d4350abc590bff852e213279e660a6",
+      "bytes": 94649222,
+      "sha256": "6578c9cb30070d0d84262498a120c05de9ce7a5920d1794fbe7a18c6e97ff5b5"
+    },
+    {
+      "name": "src",
+      "repo": "radxa/kernel",
+      "commit": "61f3fe291c7a0ca97a038194bb242b133971b76e",
+      "url": "https://codeload.github.com/radxa/kernel/tar.gz/61f3fe291c7a0ca97a038194bb242b133971b76e",
+      "bytes": 230238149,
+      "sha256": "09d00ac185c1724cfb7cff018c7b2a1e204e26c867acfda2aa4170603d0fddd7"
+    }
+  ],
+  "patch": {
+    "path": "kernel/hdmi/0001-drm-sunxi-keep-atomic-output-state-across-hpd.patch",
+    "sha256": "d1120ec8ae35177a63f2ccc77df4d47355ae0085a4e76f0dc771dd75be69914f",
+    "source_sha256": "2d0f7b4816525d4d8f0ff0c999bdfafcec7d90bd30987e7d601d9625b48f15a1",
+    "patched_source_sha256": "9164ffa2807d7d533abf21a4082b71c8272451cfef2996dd3d9c3220ab339509"
+  },
+  "original_image_sha256": "51ef626e113d01b49c014a17f1f52ec5d774e8dddbc98dad2aa7181b34b8cd28",
+  "original_config_sha256": "12bb596b07b3f4433c085bfb53adccf7c3145415a7c0ae6411e136ba8e46ba2d",
+  "sunxi_autogen_sha256": "dc88c1ccfa83a4b8f35046a82050756a8dea6869b5d7274967b8a700ce2e5786",
+  "binutils": {
+    "url": "https://ftp.gnu.org/gnu/binutils/binutils-2.44.tar.xz",
+    "sha256": "ce2017e059d63e67ddb9240e9d4ec49c2893605035cd60e92ad53177f4377237",
+    "bytes": 27285788
+  },
+  "locked_build": {
+    "build": {
+      "compiler": "aarch64-linux-gnu-gcc-14 (Ubuntu 14.2.0-4ubuntu2~24.04.1) 14.2.0",
+      "linker": "GNU ld (GNU Binutils) 2.44",
+      "build_identity": {
+        "KBUILD_BUILD_USER": "a7z-hdmi-fix",
+        "KBUILD_BUILD_HOST": "cli-candidate1",
+        "KBUILD_BUILD_VERSION": "1"
+      },
+      "timestamp": "Tue Sep 15 23:01:53 CST 2026",
+      "config_diff": {
+        "CONFIG_CC_VERSION_TEXT": {
+          "old": "\"aarch64-linux-gnu-gcc (Debian 14.2.0-19) 14.2.0\"",
+          "new": "\"aarch64-linux-gnu-gcc-14 (Ubuntu 14.2.0-4ubuntu2~24.04.1) 14.2.0\""
+        }
+      },
+      "compiled_driver": {
+        "source": "bsp/drivers/drm/sunxi_drm_hdmi.c",
+        "source_sha256": "9164ffa2807d7d533abf21a4082b71c8272451cfef2996dd3d9c3220ab339509",
+        "object_sha256": "888c4152b9c22583438ab4f382f6e968c9e65a5753f61397402515cff8d58cbf"
+      }
+    },
+    "outputs": {
+      "Image": {
+        "bytes": 24336896,
+        "sha256": "5e6410cc9f3315515a53680f3f18925964173b4d61cf74107a160d537a735409"
+      },
+      "config": {
+        "bytes": 241294,
+        "sha256": "a421b46c33c428be478a097e160299abbdf8969b2abfa577dc186d8102d1ca73"
+      },
+      "System.map": {
+        "bytes": 3904404,
+        "sha256": "cff1ad612cf2c18436d1cf907f148dbc1b9850df67b9669d7b9b28d43338c184"
+      }
+    }
+  }
+}

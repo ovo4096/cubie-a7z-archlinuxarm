@@ -79,7 +79,8 @@ class VariantTests(unittest.TestCase):
                 root = Path(directory)
                 desktop_stub = types.SimpleNamespace(configure_desktop_defaults=lambda *args: None)
                 with patch.object(rootfs, 'validate_root', return_value=root), \
-                     patch.object(rootfs, 'verify_variant'), patch.object(rootfs, 'configure_kde') as configure, \
+                     patch.object(rootfs, 'verify_variant'), patch.object(rootfs, 'remove_legacy_hdmi_compat'), \
+                     patch.object(rootfs, 'configure_kde') as configure, \
                      patch.dict('sys.modules', {'desktop': desktop_stub}), \
                      patch.object(rootfs, 'chroot_mounts', side_effect=ReachedChroot):
                     with self.assertRaises(ReachedChroot):

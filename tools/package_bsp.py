@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Package the locked T5 BSP with a source-built PowerVR fdinfo fix.
+"""Package the locked T5 BSP with HDMI kernel and PowerVR fdinfo fixes.
 
 Run on Linux against an extracted, unmodified T5 rootfs. See
-gpu/kernel/README.md for the module rebuild. Other BSP payloads remain vendor
-binaries with per-file provenance.
+kernel/hdmi/README.md and gpu/kernel/README.md for the rebuild recipes. The
+HDMI input is mandatory; there is no fallback to the original vendor Image.
 """
 from __future__ import annotations
 
@@ -41,7 +41,7 @@ LOCKED = {
 }
 SPECS = {
     "linux-radxa-a7z": {
-        "version": "6.6.98_4-1", "description": "Radxa A7Z T5 Linux kernel, device trees and in-tree modules",
+        "version": "6.6.98_4-2", "description": "Radxa A7Z T5 Linux kernel with HDMI HPD state fix, device trees and in-tree modules",
         "depends": ["coreutils", "kmod"], "provides": ["linux=6.6.98", "linux-radxa-a7z-kernel=6.6.98_4_aw2511"],
         "conflicts": ["linux-aarch64"], "licenses": ["GPL-2.0-only"],
     },
@@ -54,12 +54,12 @@ SPECS = {
         "licenses": ["LicenseRef-vendor-firmware"],
     },
     "radxa-a7z-wireless": {
-        "version": "5.0+git20260123.5f7be68d_7-1", "description": "T5 AIC8800 USB wireless modules prebuilt for the A7Z kernel",
-        "depends": ["linux-radxa-a7z=6.6.98_4-1", "radxa-a7z-firmware", "kmod"], "licenses": ["GPL-2.0-only"],
+        "version": "5.0+git20260123.5f7be68d_7-2", "description": "T5 AIC8800 USB wireless modules prebuilt for the A7Z kernel",
+        "depends": ["linux-radxa-a7z=6.6.98_4-2", "radxa-a7z-firmware", "kmod"], "licenses": ["GPL-2.0-only"],
     },
     "radxa-a7z-gpu-kmod": {
-        "version": "0.1.0_3-3", "description": "T5 PowerVR kernel module rebuilt with the DRM fdinfo fix for the A7Z kernel",
-        "depends": ["linux-radxa-a7z=6.6.98_4-1", "radxa-a7z-firmware", "kmod"], "licenses": ["GPL-2.0-only", "MIT"],
+        "version": "0.1.0_3-4", "description": "T5 PowerVR kernel module rebuilt with the DRM fdinfo fix for the A7Z kernel",
+        "depends": ["linux-radxa-a7z=6.6.98_4-2", "radxa-a7z-firmware", "kmod"], "licenses": ["GPL-2.0-only", "MIT"],
     },
 }
 MODULE_RE = re.compile(r"\.ko(?:\.(?:gz|xz|zst))?$")
@@ -189,7 +189,7 @@ def elf_modinfo(data: bytes) -> dict[str, str]:
 
 
 class Builder:
-    def __init__(self, root: Path, output: Path, epoch: int):
+    def __init__(self, root: Path, output: Path, epoch: int, hdmi_kernel_input: Path | None = None):
         self.root, self.output, self.epoch = root.resolve(), output.resolve(), epoch
         self.status_path = self.root / "var/lib/dpkg/status"
         self.status = parse_status(self.status_path)
@@ -203,6 +203,8 @@ class Builder:
         self.warnings: list[str] = []
         self.exclusions: list[dict] = []
         self.gpu_module_rebuild: dict | None = None
+        self.hdmi_kernel_input = hdmi_kernel_input
+        self.hdmi_kernel_rebuild: dict | None = None
 
     def paths(self, package: str) -> list[str]:
         info = self.root / "var/lib/dpkg/info"
@@ -353,6 +355,26 @@ class Builder:
                 record.update(source_srcversion=record["srcversion"],
                               srcversion=fixed_info.get("srcversion", ""), rebuilt=True)
 
+    def replace_hdmi_kernel(self) -> None:
+        if self.hdmi_kernel_input is None:
+            raise ValueError("The source-built HDMI kernel input is required")
+        from build_hdmi_kernel import load_kernel_input
+        payloads, report = load_kernel_input(self.hdmi_kernel_input, self.root)
+        package = "linux-radxa-a7z"
+        for name, prefix in (("Image", "vmlinuz"), ("config", "config"), ("System.map", "System.map")):
+            path = f"boot/{prefix}-{KERNEL}"
+            original = self.entries[package].get(path)
+            if original is None or original["type"] != "file":
+                raise ValueError("Missing regular original kernel payload: " + path)
+            data = payloads[name]
+            replacement = {key: value for key, value in original.items() if key != "source"}
+            replacement.update(data=data, size=len(data), sha256=sha256(data),
+                               source_sha256=original["sha256"],
+                               transformation="source-build-with-hdmi-hpd-atomic-state-fix")
+            self.entries[package][path] = replacement
+        self.generated(package, "usr/share/doc/linux-radxa-a7z/hdmi-fix-provenance.json", data=json_bytes(report))
+        self.hdmi_kernel_rebuild = report
+
     def select(self) -> None:
         linux_deb = f"linux-image-{KERNEL}"
         for name in self.paths(linux_deb):
@@ -415,6 +437,7 @@ class Builder:
             if f"usr/lib/firmware/{firmware}" not in self.entries["radxa-a7z-firmware"]:
                 raise ValueError(f"Matching PowerVR firmware missing: {firmware}")
 
+        self.replace_hdmi_kernel()
         self.replace_gpu_module()
 
         for package in SPECS:
@@ -434,6 +457,8 @@ class Builder:
                 owners[path] = package
 
     def provenance(self, package: str) -> dict:
+        if package == "linux-radxa-a7z" and self.hdmi_kernel_rebuild is None:
+            raise ValueError("Kernel cannot be packaged without the HDMI fix input")
         if package == "radxa-a7z-gpu-kmod" and self.gpu_module_rebuild is None:
             raise ValueError("GPU module cannot be packaged without the validated fdinfo rebuild")
         result = {
@@ -448,6 +473,9 @@ class Builder:
         if package == "radxa-a7z-gpu-kmod":
             result["method"] = "vendor BSP plus source-built PowerVR DRM fdinfo fix; no Debian maintainer scripts executed; no storage flashed"
             result["module_rebuild"] = self.gpu_module_rebuild
+        if package == "linux-radxa-a7z":
+            result["method"] = "source-built HDMI kernel plus original T5 DTBs and modules; no Debian maintainer scripts executed; no storage flashed"
+            result["kernel_rebuild"] = self.hdmi_kernel_rebuild
         return result
 
     def pkginfo(self, package: str, size: int) -> bytes:
@@ -529,6 +557,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--vendor-root", type=Path, required=True, help="Extracted official T5 rootfs (read only)")
     parser.add_argument("--output", type=Path, required=True, help="Output directory; regular files only, never a block device")
+    parser.add_argument("--hdmi-kernel-input", type=Path, required=True, help="Image, config, System.map and public provenance from build_hdmi_kernel.py")
     parser.add_argument("--source-date-epoch", type=int, default=int(os.environ.get("SOURCE_DATE_EPOCH", "1789344000")))
     args = parser.parse_args()
     if not shutil.which("zstd"):
@@ -542,7 +571,7 @@ def main() -> int:
     if output == vendor or vendor in output.parents:
         parser.error("--output must be outside --vendor-root to keep the input read only")
     try:
-        result = Builder(vendor, output, args.source_date_epoch).run()
+        result = Builder(vendor, output, args.source_date_epoch, args.hdmi_kernel_input).run()
     except (ValueError, RuntimeError, OSError, subprocess.CalledProcessError) as error:
         print(f"BSP packaging failed: {error}", file=sys.stderr)
         return 1

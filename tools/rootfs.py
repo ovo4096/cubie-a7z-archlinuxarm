@@ -124,21 +124,11 @@ def configure_kde(root):
         managed_configuration(root, "etc/sddm.conf.d/50-a7z-kde.conf", "[Theme]\nCurrent=breeze\n")
 
 
-def configure_hdmi_compat(root, variant):
-    if variant == "cli":
-        return
-    if not (root / "usr/bin/a7z-hdmi-compat").is_file():
-        raise ValueError("HDMI compatibility helper missing; install radxa-a7z-base 0.1.0-5 or newer")
-    if variant == "kde":
-        managed_configuration(root, "etc/sddm.conf.d/95-a7z-hdmi-compat.conf",
-                              "[X11]\n"
-                              "DisplayCommand=/usr/bin/a7z-hdmi-compat --sddm\n"
-                              "DisplayStopCommand=/usr/bin/a7z-hdmi-compat --sddm --stop\n")
-    else:
-        managed_configuration(root, "etc/lightdm/lightdm.conf.d/95-a7z-hdmi-compat.conf",
-                              "[Seat:*]\n"
-                              "display-setup-script=/usr/bin/a7z-hdmi-compat --lightdm\n"
-                              "display-stopped-script=/usr/bin/a7z-hdmi-compat --lightdm --stop\n")
+def remove_legacy_hdmi_compat(root):
+    # Also run after package installation when reusing an older offline rootfs.
+    # The migration never changes GPU/Xorg settings or the running HPD state.
+    migration = Path(__file__).resolve().parents[1] / "runtime/a7z-hdmi-migrate"
+    run([sys.executable, migration, "--root", root, "--strict"])
 
 
 def run(args, **kwargs):
@@ -264,12 +254,12 @@ def finalize(args):
     root = validate_root(args.rootfs)
     variant = selected_variant(args)
     verify_variant(root, variant)
+    remove_legacy_hdmi_compat(root)
     if variant == "kde":
         configure_kde(root)
     if variant != "cli":
         from desktop import configure_desktop_defaults
         configure_desktop_defaults(root, variant)
-        configure_hdmi_compat(root, variant)
     with chroot_mounts(root):
         if variant != "cli":
             chroot(root, ["/usr/bin/locale-gen"])
