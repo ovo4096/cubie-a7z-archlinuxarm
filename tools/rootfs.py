@@ -20,7 +20,7 @@ BASE_PACKAGES = [
     "gptfdisk", "cloud-guest-utils",
     "curl", "wget", "zstd",
 ]
-GUI_PACKAGES = ["xorg-server", "xf86-input-libinput", "mesa", "mesa-utils", "libglvnd",
+GUI_PACKAGES = ["xorg-server", "xorg-xrandr", "xf86-input-libinput", "mesa", "mesa-utils", "libglvnd",
                 "ttf-dejavu", "noto-fonts-cjk", "noto-fonts-emoji", "chromium",
                 "fcitx5", "fcitx5-rime", "fcitx5-gtk", "fcitx5-qt", "fcitx5-configtool", "rime-luna-pinyin",
                 "gstreamer", "gst-plugins-base", "gst-plugins-good", "gst-plugins-bad",
@@ -122,6 +122,23 @@ def configure_kde(root):
                           "Environment=VK_DRIVER_FILES=/usr/share/radxa-a7z-gpu/vulkan/powervr_icd.json\n")
     if (root / "usr/share/sddm/themes/breeze/Main.qml").is_file():
         managed_configuration(root, "etc/sddm.conf.d/50-a7z-kde.conf", "[Theme]\nCurrent=breeze\n")
+
+
+def configure_hdmi_compat(root, variant):
+    if variant == "cli":
+        return
+    if not (root / "usr/bin/a7z-hdmi-compat").is_file():
+        raise ValueError("HDMI compatibility helper missing; install radxa-a7z-base 0.1.0-5 or newer")
+    if variant == "kde":
+        managed_configuration(root, "etc/sddm.conf.d/95-a7z-hdmi-compat.conf",
+                              "[X11]\n"
+                              "DisplayCommand=/usr/bin/a7z-hdmi-compat --sddm\n"
+                              "DisplayStopCommand=/usr/bin/a7z-hdmi-compat --sddm --stop\n")
+    else:
+        managed_configuration(root, "etc/lightdm/lightdm.conf.d/95-a7z-hdmi-compat.conf",
+                              "[Seat:*]\n"
+                              "display-setup-script=/usr/bin/a7z-hdmi-compat --lightdm\n"
+                              "display-stopped-script=/usr/bin/a7z-hdmi-compat --lightdm --stop\n")
 
 
 def run(args, **kwargs):
@@ -252,6 +269,7 @@ def finalize(args):
     if variant != "cli":
         from desktop import configure_desktop_defaults
         configure_desktop_defaults(root, variant)
+        configure_hdmi_compat(root, variant)
     with chroot_mounts(root):
         if variant != "cli":
             chroot(root, ["/usr/bin/locale-gen"])

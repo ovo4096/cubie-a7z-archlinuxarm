@@ -1,4 +1,9 @@
-# 中文桌面默认设置
+# 桌面与中文输入默认设置
+
+`v0.2.1-t5` 在 XFCE / LightDM 和 KDE / SDDM 的 X11 启动阶段新增 HDMI 输出恢复，
+按连接、EDID、当前 / 优选模式和驱动状态判断，不限定显示器型号。
+正常输出保持原样，持续异常时才逐级恢复，详情见 [HDMI 说明](HDMI.zh-CN.md)。
+新增通用逻辑和新镜像均未测试；中文输入与浏览器配置没有改动，以下保留原有说明。
 
 XFCE 与 KDE 镜像预装 Fcitx 5 + Rime，默认方案是 **朙月拼音·简化字**
 （`luna_pinyin_simp`）。初始状态为英文，按 **Ctrl+Space** 切换中文；
@@ -51,7 +56,7 @@ CLI 调用不写任何文件。
 自定义采用上游推荐的 `.custom.yaml` 补丁形式，不覆盖官方词库与方案。
 [Rime 定制指南](https://github.com/rime/home/wiki/CustomizationGuide)
 
-离线验证：
+开发者可按以下命令进行离线验证；v0.2.1 发布没有执行此测试：
 
 ```sh
 python3 -m unittest discover -s tests -p test_desktop_defaults.py -v

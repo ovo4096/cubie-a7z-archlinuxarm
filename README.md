@@ -1,38 +1,38 @@
 # cubie-a7z-archlinuxarm
 
-Radxa Cubie A7Z 的 Arch Linux ARM 移植：使用锁定的官方 **T5 / Trixie BSP**，保留 U-Boot、设备树、内核、无线模块和配套 GPU 用户态，提供 CLI、XFCE、KDE 三种独立构建变体以及 SD / UFS 两种整盘镜像。
+Radxa Cubie A7Z 的 Arch Linux ARM 移植，基于锁定的官方 **T5 / Trixie BSP**，提供 CLI、XFCE、KDE 各自的 SD / UFS 整盘镜像。
 
-[安装到 SD / UFS](INSTALL.zh-CN.md) · [发行说明与验证范围](RELEASE.zh-CN.md) · [首次启动 Wi-Fi](WIFI-FIRSTBOOT.zh-CN.md) · [KDE 说明](KDE.zh-CN.md) · [公开镜像清理](RELEASE-HYGIENE.zh-CN.md) · [滚动升级](ROLLING-UPGRADE.zh-CN.md) · [第三方许可](THIRD-PARTY-LICENSES.zh-CN.md)
+**[v0.2.1-t5](https://github.com/ovo4096/cubie-a7z-archlinuxarm/releases/tag/v0.2.1-t5)** 为 XFCE / KDE 加入 HDMI 启动恢复：按已连接显示器的有效 EDID、当前 / 优选模式及驱动状态判断，不限定型号或固定分辨率。正常输出保持原样；发现持续的输出关闭异常时先普通重启输出，仍异常才保持 HPD 连接兜底。CLI 不启用，没有 USB 修复。**新增通用逻辑及本次新镜像均未运行自动化、滚动升级或实机启动测试。** 适用范围与热插拔限制见 [HDMI 说明](desktop/HDMI.zh-CN.md)。此前单款显示器的恢复记录不能代表多型号适配已通过验证。
 
-源码位于本仓库；镜像、校验清单和对应构建记录通过 [GitHub Releases](https://github.com/ovo4096/cubie-a7z-archlinuxarm/releases) 发布。请以具体 release 的资产和验证表为准，源码中的变体支持不等于每个变体都完成了相同的硬件验收。
+[SD / UFS 安装](INSTALL.zh-CN.md) · [发行说明](RELEASE.zh-CN.md) · [烧录前 Wi-Fi](WIFI-FIRSTBOOT.zh-CN.md) · [KDE](KDE.zh-CN.md) · [镜像清理](RELEASE-HYGIENE.zh-CN.md) · [滚动升级](ROLLING-UPGRADE.zh-CN.md) · [第三方许可](THIRD-PARTY-LICENSES.zh-CN.md)
 
 ## 选择镜像
 
 | 变体 | 默认环境 | 主要配置 |
 |---|---|---|
 | `cli` | SSH、NetworkManager、维护工具，无桌面 | 适合无显示器运行或作为 UFS 安装用 SD；不安装浏览器和输入法 |
-| `xfce` | XFCE + LightDM + Arch Xorg | XRender/XPresent 合成、预装 Chromium（PowerVR）和 Fcitx5 + Rime |
-| `kde` | Plasma X11 + SDDM | Qt Quick 界面使用 PowerVR Vulkan，预装同一 Chromium 优化与 Fcitx5 + Rime；KWin 合成关闭 |
+| `xfce` | XFCE + LightDM + Arch Xorg | XRender / XPresent 合成、Chromium（PowerVR）、Fcitx5 + Rime 和 HDMI 启动兼容处理 |
+| `kde` | Plasma X11 + SDDM | Qt Quick 使用 PowerVR Vulkan，同一 Chromium / Rime 和 HDMI 启动兼容处理；KWin 合成关闭 |
 
-文件名采用 `cubie-a7z-archlinuxarm-{cli|xfce|kde}-t5-{sd-512|ufs-4096}.img.zst`。SD 镜像用于 512 字节逻辑扇区，UFS 镜像用于 4096 字节逻辑扇区；两者不可互换。首次启动自动扩展最后一个 ext4 根分区。
+文件名为 `cubie-a7z-archlinuxarm-{cli|xfce|kde}-t5-{sd-512|ufs-4096}.img.zst`。SD 使用 **512 字节**逻辑扇区，UFS 使用 **4096 字节**；两种镜像不可互换。首次启动自动扩展根分区。
 
-此前实机适配验证了 EGL/GLES 硬件绘制、Arch Xorg glamor，以及 Qt 动画窗口、SDDM 登录界面和 Plasma 桌面的 PowerVR Vulkan 渲染。KDE 保留 Arch Qt/Mesa/GLVND，用私有 Vulkan ICD 选择 GPU；未向桌面注入私有 EGL 库路径或预加载适配库。KWin 的 EGL 窗口创建仍会崩溃，合成暂时关闭；GLX/AIGLX 客户端仍使用软件路径。Wayland、通用 Vulkan 计算/游戏和长时间负载未因此得到验证。每版镜像的验收范围见发行说明。
+桌面预设简体中文和中文字体，Rime 使用「朙月拼音·简化字」，按 **Ctrl+Space** 切换中英文，初始为英文。首次启用时自动部署词典；公开镜像不带个人词库或浏览器资料。
 
-`v0.2.0-t5` 的桌面配方把 [Chromium（PowerVR）入口](gpu/CHROMIUM.zh-CN.md) 和浏览器一同预装，默认网页关联使用该入口；两种桌面均预设简体中文会话、中文字体和 Rime「朙月拼音·简化字」。按 `Ctrl+Space` 切换中英文，初始为英文；第一次启用 Rime 会自动部署词典。用户词库和浏览器资料在用户自己的系统中创建，公开镜像不携带个人数据。
-
-Chromium 的网页合成、Canvas、WebGL 和栅格化此前已在 XFCE 实机通过 PowerVR Vulkan 验证，[验收记录](gpu/XFCE-CHROMIUM-VALIDATION.zh-CN.md)包含受控性能比较。**Chromium 内的视频硬解仍未接通**：GPU 网页绘制不等于视频硬件解码。本版 XFCE/KDE 镜像同时预装 [Cedar/OMX 视频包](vpu/README.zh-CN.md)与 GStreamer，可通过 `a7z-vpu-run` 选择独立的 H.264 硬解路径；CLI 未安装这个 VPU 包。独立硬解不能靠安装包或额外浏览器参数自动接入 Chromium。最终镜像的硬件验收以 [发行说明](RELEASE.zh-CN.md)为准。
+默认浏览器入口为 [Chromium（PowerVR）](gpu/CHROMIUM.zh-CN.md)，沿用已有的 PowerVR Vulkan 网页绘制配置。**Chromium 内的视频硬解仍未接通**；XFCE / KDE 预装的 [Cedar / OMX 与 GStreamer](vpu/README.zh-CN.md)提供独立 H.264 硬解路径，两者不能混同。KDE 保留 Arch Qt / Mesa / GLVND，采用私有 Vulkan ICD；KWin 合成关闭，GLX / AIGLX 仍是软件路径，Wayland 未适配。本版没有新增 GPU / 视频优化。
 
 ## 烧录与无显示器启动
 
-完整命令见 [SD / UFS 安装指南](INSTALL.zh-CN.md)。先下载镜像、对应 `.img.sha256` 和 release 的 `SHA256SUMS`，校验压缩包、解压，再校验原始镜像。需要无显示器自动联网时，用 [Wi-Fi 向导](WIFI-FIRSTBOOT.zh-CN.md)生成 `-private.img` 后烧录私人副本；SD 网络配置不会自动进入另一个 UFS 镜像。
+完整命令见 [安装指南](INSTALL.zh-CN.md)。下载镜像、对应 `.img.sha256` 和 release 的 `SHA256SUMS`，校验压缩包，解压后再校验原始镜像。
 
-**SD：** 使用电脑读卡器烧录已解压的 `sd-512.img`，完成工具的写后校验，断电插入开发板再上电。[板载 SD 维护脚本](tools/flash_sd.py)保留 CID、挂载、容量检查和完整回读；电脑 USB 读卡器通常不是 `mmcblk`，使用电脑烧录工具即可。
+**SD：** 用电脑读卡器将解压后的 `sd-512.img` 写入整张卡，完成写后校验，关机插卡再上电。
 
-**UFS 主要方式：** 从 SD 正常启动后，在板上下载所需 `ufs-4096.img.zst`，校验并解压到 SD，核对 UFS 整盘、4096 字节扇区及未挂载状态，再通过 `dd bs=4M conv=fsync` 写入、完整回读、迁移备份 GPT。完成后关机、拔 SD、再上电。这个流程遵循 [官方 UFS 安装方法](https://docs.radxa.com/cubie/a7z/getting-started/install-system/ufs)，具体命令与设备识别要求见安装指南。
+**UFS 主要方式：** 先从 SD 启动，在板上下载 `ufs-4096.img.zst`，校验并解压到 SD。核对 UFS 整盘、4096 字节扇区及未挂载状态，通过 `dd` 写入、完整回读、迁移备份 GPT；成功后关机、拔卡、上电。这个流程与 [官方 UFS 安装方式](https://docs.radxa.com/cubie/a7z/getting-started/install-system/ufs)一致。
 
-**UFS 第二选项：** 使用 `a7z-install-ufs --dry-run` 先预览，再由安装器完成写入、完整回读和 GPT 调整。安装器拒绝当前根盘、已挂载设备、4 MiB boot LUN、错误扇区或不足容量。两种方式都写整盘 `.img`，不写压缩包或单个分区。
+**UFS 第二选项：** 先用 `a7z-install-ufs --dry-run` 预览，再由项目安装器执行写入、完整回读与 GPT 调整。两种方法都写原始整盘 `.img`，不写压缩包或单个分区。
 
-首次登录用户为 `alarm`，初始登录密码为 `alarm`；root 账号锁定。请首次登录后立即运行 `passwd`。公开镜像没有固定的 SSH 主机密钥；它们在首次启动生成。使用路由器 DHCP 客户端列表寻找设备，连接前核实新的 SSH 主机身份。
+需要首次启动自动联网时，用 [Wi-Fi 向导](WIFI-FIRSTBOOT.zh-CN.md)预先生成 `-private.img`，再烧录私人副本。SD 的网络配置不会自动进入另一个 UFS 镜像；私人副本不能再公开分发。
+
+初始用户 / 密码为 `alarm` / `alarm`，root 锁定，无自动登录；首次登录后执行 `passwd`。SSH 主机密钥在首次启动生成，可从路由器 DHCP 列表找到设备并核对新主机身份。
 
 ## 从源码构建
 
@@ -63,15 +63,17 @@ sudo python3 tools/build.py --variant kde --work-dir /root/a7z-build/kde
 
 流程依次为锁定源下载校验、独立 rootfs 解包、Arch 包安装、BSP/GPU/base 包生成、启动配置、公开镜像清理、两种镜像组装、压缩和审计。构建记录包含每个已完成阶段及镜像、压缩包的完整哈希。`--stop-after` 可停在明确阶段。可用 `--root-size-mib` 指定初始根分区大小；默认按内容估算。KDE 体积较大，应预留足够空间。
 
-本次发行镜像采用增量构建：复用构建机上经过清理检查的同变体预制 rootfs，重新执行完整 `pacman -Syu`、全部板级包的打包与安装、启动配置和镜像清理，再生成新的 SD/UFS 镜像。此次没有重新解包 Arch 初始归档，也没有从开发板导入系统、网络配置或用户数据。完成审计后，`build-manifest-*.json` 的 `input_reuse` 字段记录复用来源的源码、旧构建状态、包清单、清理报告和 GPU 来源信息的 SHA256，并用 `fresh_arch_seed_extracted=false` 明确标记解包范围；最终文件的实机结果仍单独列在 [发行说明](RELEASE.zh-CN.md)。
+v0.2.1 是显示兼容补丁发行版：只读复用 v0.2.0 最终 R5 构建的干净离线 rootfs，复制到新构建卷后升级 `radxa-a7z-base 0.1.0-5`；GUI 另安装 `xorg-xrandr 1.5.4-1` 和显示管理器启动 / 停止钩子。执行构建清理后，重新生成带独立 UUID 的六张镜像。本轮没有执行 `pacman -Syu`，内核、GPU、Chromium 和 Rime 等包保持原版本。这个补丁发行流程与上面的通用全流程构建命令不同，具体输入和产物哈希见发布页构建记录；没有从测试板导入系统、网络配置或用户数据。
 
 固定输入见 [config/sources.lock.json](config/sources.lock.json)：T5 内核 `6.6.98-4-aw2511`、配套 U-Boot 和官方 rootfs。`pacman -Syu` 使用滚动仓库，因此固定初始归档不代表以后逐字节重建；工具记录最终包版本、缓存 SHA256、构建配方和镜像哈希，供审计本次结果。
 
 本项目不会把 Debian 的 `/usr/lib` 整体覆盖到 Arch。闭源/预编译 GPU 用户态放在私有目录，Arch Xorg 本体和 Mesa/libglvnd 保留；调用指定 GPU 路径时才使用 wrapper。进一步说明见 [GPU 使用文档](gpu/README.zh-CN.md)。第三方组件的许可证、来源和当前证据边界见 [THIRD-PARTY-LICENSES.zh-CN.md](THIRD-PARTY-LICENSES.zh-CN.md)，不能将项目 MIT 许可证理解为第三方载荷已全部取得同样授权。
 
-## 测试与源码导出
+## 开发测试与源码导出
 
-以下测试在 Linux / WSL 中运行，依赖 Linux 路径、权限和设备语义；不要在 Windows 原生 Python 中运行完整测试集。本次修订对应的 140 项测试已通过：91 项主测试、16 项 BSP 包测试、28 项 GPU 测试和 5 项 VPU 包测试。另有此前通过的 4 组根分区扩容真实 loop 测试，覆盖 512/4096 字节扇区及是否预先执行 `sgdisk -e`；该扩容实现未改动。这些检查不替代最终镜像的实机验收。
+仓库保留开发测试命令，供后续开发运行；**v0.2.1 发布没有执行这些测试，也没有开展新镜像硬件启动或滚动升级回归**。v0.2.0 的测试记录属于历史结果，不作为本版验收结论。
+
+以下命令需要 Linux / WSL 的路径、权限和设备语义，不应在 Windows 原生 Python 中运行完整测试集：
 
 ```sh
 python3 -m unittest discover -s tests -p 'test_*.py' -v
@@ -82,6 +84,6 @@ python3 tools/export_source.py --plan
 python3 tools/export_source.py --output out/source-release
 ```
 
-镜像/安装器 loop 集成测试需要 Linux root 和明确的新测试目录；[Wi-Fi 镜像集成测试](tests/integration_personalize.py) 不需要 root 或设备访问。测试脚本生成的是测试夹具，不能用于启动开发板。
+源码导出使用明确白名单，不导出开发仓库历史、SSH / 串口私人 helper、实机记录、备份、下载缓存或二进制产物；导出目录附源码 manifest 与 SHA256 清单。目标须为新目录。镜像安装器的 loop 集成测试另需 Linux root 和专用新目录，生成的测试夹具不能用于开发板启动。
 
-源码导出只复制明确白名单，缺文件、私密模式匹配或指向未导出记录的本地文档链接都会拒绝。目标必须是新目录；不导出开发仓库历史、SSH/串口私人 helper、实机记录、备份、下载缓存或二进制产物。导出目录自带源码 manifest 与 SHA256 清单。项目自身代码和文档采用 [MIT](LICENSE)；第三方组件单独遵循其许可证。
+项目自身代码和文档采用 [MIT](LICENSE)，第三方组件分别遵循上游许可证。

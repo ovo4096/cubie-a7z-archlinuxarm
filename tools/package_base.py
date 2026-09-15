@@ -11,7 +11,7 @@ import sys
 import package_bsp as bsp
 
 PACKAGE = "radxa-a7z-base"
-VERSION = "0.1.0-4"
+VERSION = "0.1.0-5"
 SPEC = {
     "version": VERSION,
     "description": "Arch Linux ARM A7Z boot preparation, first boot and SD/UFS runtime tools",
@@ -26,7 +26,7 @@ BOOT_MAPPING = {
     "99-a7z-boot-update.hook": "usr/share/libalpm/hooks/99-a7z-boot-update.hook",
     "extlinux.conf.example": "usr/share/a7z/extlinux.conf.example",
 }
-REQUIRED_RUNTIME = ("a7z-boot-update", "a7z-firstboot", "a7z-grow-root", "a7z-install-ufs", "a7z-firstboot.service", "a7z-grow-root.service")
+REQUIRED_RUNTIME = ("a7z-boot-update", "a7z-firstboot", "a7z-grow-root", "a7z-install-ufs", "a7z-firstboot.service", "a7z-grow-root.service", "a7z-hdmi-compat")
 BACKUPS = ("etc/kernel/cmdline", "etc/mkinitcpio-a7z.conf")
 
 

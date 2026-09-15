@@ -1,10 +1,10 @@
 # 安装到 SD 或板载 UFS
 
-本指南适用于 `v0.2.0-t5` 的 CLI、XFCE 和 KDE 镜像。UFS 的主要安装方式是**先从 SD 启动，在板上下载 UFS 镜像，解压后用 `dd` 写入整块 UFS**，与 [Radxa 官方 UFS 流程](https://docs.radxa.com/cubie/a7z/getting-started/install-system/ufs) 一致。项目安装器保留为第二选项。
+本指南适用于 `v0.2.1-t5` 的 CLI、XFCE 和 KDE 镜像。UFS 的主要安装方式是**先从 SD 启动，在板上下载 UFS 镜像，解压后用 `dd` 写入整块 UFS**，与 [Radxa 官方 UFS 流程](https://docs.radxa.com/cubie/a7z/getting-started/install-system/ufs) 一致。项目安装器保留为第二选项。
 
 ## 1. 选择文件并准备首次联网
 
-从 [v0.2.0-t5 发布页](https://github.com/ovo4096/cubie-a7z-archlinuxarm/releases/tag/v0.2.0-t5) 下载：
+从 [v0.2.1-t5 发布页](https://github.com/ovo4096/cubie-a7z-archlinuxarm/releases/tag/v0.2.1-t5) 下载：
 
 | 文件名中的字段 | 用途 |
 |---|---|
@@ -51,11 +51,11 @@ sync
 以下示例把 KDE 安装到 UFS。希望安装 XFCE 或 CLI 时，只把 `variant=kde` 改为 `xfce` 或 `cli`。在已经从 SD 启动的开发板终端中执行：
 
 ```sh
-mkdir -p ~/a7z-ufs-v0.2.0
-cd ~/a7z-ufs-v0.2.0
+mkdir -p ~/a7z-ufs-v0.2.1
+cd ~/a7z-ufs-v0.2.1
 variant=kde
 image="cubie-a7z-archlinuxarm-${variant}-t5-ufs-4096.img"
-base='https://github.com/ovo4096/cubie-a7z-archlinuxarm/releases/download/v0.2.0-t5'
+base='https://github.com/ovo4096/cubie-a7z-archlinuxarm/releases/download/v0.2.1-t5'
 df -h .
 curl --fail --location --retry 3 --remote-name "$base/$image.zst"
 curl --fail --location --retry 3 --remote-name "$base/$image.sha256"
@@ -152,6 +152,6 @@ sudo a7z-install-ufs --image "$image" --target "$target"
 
 XFCE 与 KDE 使用普通密码登录，没有自动登录。两种桌面预装 **Chromium（PowerVR）** 并将其设为默认网页入口；菜单或 `a7z-chromium` 均使用同一优化。正常退出所有浏览器实例后，`a7z-chromium --software` 可回退。查看 `chrome://gpu` 验证网页硬件绘制；当前 Chromium 的视频解码仍为 CPU，详见 [浏览器说明](gpu/CHROMIUM.zh-CN.md)。
 
-XFCE/KDE 还预装 GStreamer 与 Cedar/OMX VPU 包，独立应用可通过 `a7z-vpu-run` 选择已验证的 H.264 硬解后端；它不会自动给 Chromium 增加视频硬解接口。CLI 未安装 VPU 包。运行方式见 [VPU 说明](vpu/README.zh-CN.md)。
+XFCE/KDE 还预装 GStreamer 与 Cedar/OMX VPU 包，独立应用可通过 `a7z-vpu-run` 选择 H.264 硬解后端。已有实机验证来自 v0.2.0，本次未重测；它不会自动给 Chromium 增加视频硬解接口。CLI 未安装 VPU 包。运行方式见 [VPU 说明](vpu/README.zh-CN.md)。
 
 中文输入使用 Fcitx5 + Rime「朙月拼音·简化字」，桌面登录后自动启动，初始英文，按 `Ctrl+Space` 切换中英文。输入拼音后按空格选字；第一次启用时 Rime 自动部署词典，可能短暂等待。图形会话使用 `zh_CN.UTF-8`，CLI/TTY 不强制中文。使用方式见 [中文桌面预设](desktop/README.zh-CN.md)；KDE 的 Vulkan 配置与回退见 [KDE 说明](KDE.zh-CN.md)。日常完整更新前阅读 [滚动升级说明](ROLLING-UPGRADE.zh-CN.md)。

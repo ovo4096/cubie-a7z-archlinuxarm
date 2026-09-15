@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "project": "cubie-a7z-archlinuxarm",
-  "created_utc": "2026-09-15T06:38:58.622500+00:00",
+  "created_utc": "2026-09-15T12:56:43.641261+00:00",
   "scope": "Explicitly allowlisted project source, tests, docs and upstream source lock. No images, packages, private diagnostics, backups or repository history.",
   "audit": {
     "result": "PASS",
@@ -31,8 +31,8 @@
     },
     {
       "path": "INSTALL.zh-CN.md",
-      "bytes": 11041,
-      "sha256": "054e87e9262f4dfb15a2a0c6694d08cc51d8763c1375f2dadda9ff2c712ee469",
+      "bytes": 11081,
+      "sha256": "fcc4cf579469ad1890e7ce34a60caad06d3821aeb2f3edfc69b1b27b2c486a31",
       "mode": "0644"
     },
     {
@@ -49,8 +49,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 10700,
-      "sha256": "756f0084828ce4bf8577dd5ab81ad87d0965efb82195031f829cd2477c3a5f5b",
+      "bytes": 9261,
+      "sha256": "38152750c7ac49628b47f0d1dccca77e1590c37e94ba4f5c8411fe2cd5bfa3ef",
       "mode": "0644"
     },
     {
@@ -61,8 +61,8 @@
     },
     {
       "path": "RELEASE.zh-CN.md",
-      "bytes": 19253,
-      "sha256": "8ea704a1f63a33a36a8eff86b76d329f3804d7ef5810fbdcf34bf4788df75cb4",
+      "bytes": 15381,
+      "sha256": "0450f30a01b6324691e1f1a86cd3a73758cce21fef680c6240e250231692665f",
       "mode": "0644"
     },
     {
@@ -90,9 +90,15 @@
       "mode": "0644"
     },
     {
+      "path": "desktop/HDMI.zh-CN.md",
+      "bytes": 5282,
+      "sha256": "bb4d53bdf32889223c0fa24b70b78e8c8d22b2826055418e72c494f75c54c2eb",
+      "mode": "0644"
+    },
+    {
       "path": "desktop/README.zh-CN.md",
-      "bytes": 3904,
-      "sha256": "b986d892f9e416f5812ab7f2a5e6c73c260bad24e3a14371ea2fd90bfdf58fc4",
+      "bytes": 4390,
+      "sha256": "2ba1c5fc81664c003818b3d7d4253a23a2c042c5695407d8199286398535ff9a",
       "mode": "0644"
     },
     {
@@ -324,6 +330,12 @@
       "mode": "0644"
     },
     {
+      "path": "runtime/a7z-hdmi-compat",
+      "bytes": 11935,
+      "sha256": "94d99432343f5aaa0a8c92158903d764c3a011a6b8eab679bfbe976145721f8a",
+      "mode": "0755"
+    },
+    {
       "path": "runtime/a7z-install-ufs",
       "bytes": 22560,
       "sha256": "bee8d1a484451c1faf74d9aec0d730abfdbafa236aa43a0044e9769c09717150",
@@ -475,8 +487,8 @@
     },
     {
       "path": "tools/export_source.py",
-      "bytes": 10034,
-      "sha256": "7b6ac8391a2c68960b4c1366ceede7f27733ff1c4d1ee4e45f083941e15b09fd",
+      "bytes": 10086,
+      "sha256": "2ef0f8b20ec0f673e90861297a25a4b786b9331b078f9a411159f0d9500cff74",
       "mode": "0755"
     },
     {
@@ -493,8 +505,8 @@
     },
     {
       "path": "tools/package_base.py",
-      "bytes": 5434,
-      "sha256": "b8423f640246a2ff3fd213a98b42ce55d7ab2a8dfa27e24012022168a34259c2",
+      "bytes": 5453,
+      "sha256": "0fab1dd969d61153cf92893d7dc3b2a82773c38ab174d34b56714ac01a38c4aa",
       "mode": "0755"
     },
     {
@@ -523,8 +535,8 @@
     },
     {
       "path": "tools/rootfs.py",
-      "bytes": 18310,
-      "sha256": "f6661a44fb42cdbba2307dde5fbeb541d444211b77c395ce7bb240778b90ef0b",
+      "bytes": 19265,
+      "sha256": "a2d4178b0c35b06148a276fe6d526bf8b19c8a54b2f4acd22999ed8efbea1c25",
       "mode": "0755"
     },
     {
